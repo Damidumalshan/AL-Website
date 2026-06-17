@@ -224,11 +224,6 @@
 
         .workspace-layout { display: flex; gap: 25px; align-items: flex-start; }
         .questions-area { flex: 1; }
-        
-        .jump-map-sidebar { position: sticky; top: 120px; width: 220px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 20px; box-shadow: var(--card-shadow); display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-height: 75vh; overflow-y: auto; }
-        .jump-dot { height: 32px; width: 100%; border-radius: 8px; background: rgba(128,128,128,0.15); border: 1px solid var(--card-border); color: var(--text-main); font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-        .jump-dot.answered { background: var(--primary) !important; color: white; border-color: transparent; }
-        .jump-dot.flagged { background: #f59e0b !important; color: white; border-color: transparent; animation: pulse 1.5s infinite alternate; }
 
         .exam-tracker { position: sticky; top: 20px; z-index: 100; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); padding: 15px 25px; border-radius: 14px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--card-shadow); }
         .tracker-info h4 { margin: 0; font-size: 18px; }
@@ -575,7 +570,7 @@
                 <span>All questions must be attempted before final grading</span>
             </div>
             <div class="tracker-pills-box">
-                <div class="tracker-pill" id="exam-timer-pill">Time: 120:00</div>
+                <div class="tracker-pill" id="exam-timer-pill">Time: 150:00</div>
                 <div class="tracker-pill" id="completion-counter">Answered: 0 / 50</div>
             </div>
         </div>
@@ -586,7 +581,6 @@
             <div class="workspace-layout">
                 <div class="questions-area" id="dynamic-questions-target"></div>
                 
-                <div class="jump-map-sidebar" id="jump-map-target"></div>
             </div>
 
             <div class="footer-action">
@@ -602,7 +596,7 @@
     let currentYear = '';
     let examTimerInterval = null;
     let secondsElapsed = 0;
-    let totalExamDurationSeconds = 120 * 60; 
+    let totalExamDurationSeconds = 150 * 60; 
     let isShuffleMode = false;
     let activeQuestionsArray = [];
     let currentLightboxScale = 1.0;
@@ -761,9 +755,7 @@
         document.getElementById('submitBtn').style.opacity = '1';
 
         const qTarget = document.getElementById('dynamic-questions-target');
-        const mapTarget = document.getElementById('jump-map-target');
         let cardHTML = '';
-        let mapHTML = '';
 
         activeQuestionsArray.forEach((q, loopIdx) => {
             let currentDisplayNum = loopIdx + 1;
@@ -811,11 +803,9 @@
                     </div>
                 </div>
             `;
-            mapHTML += `<div class="jump-dot" id="jump-dot-q${currentDisplayNum}" onclick="scrollToQuestion(${currentDisplayNum})">${currentDisplayNum}</div>`;
         });
 
         qTarget.innerHTML = cardHTML;
-        mapTarget.innerHTML = mapHTML;
         
         navigateTo('exam');
         startExamClockEngine();
@@ -823,24 +813,16 @@
         updateRealtimeCounter();
     }
 
-    function scrollToQuestion(num) {
-        document.getElementById(`q${num}-block`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-        playSynthBeep(700, 0.02);
-    }
-
     function toggleFlagTracker(num) {
         const card = document.getElementById(`q${num}-block`);
         const btn = document.getElementById(`flag-q${num}`);
-        const dot = document.getElementById(`jump-dot-q${num}`);
         
         card.classList.toggle('flagged');
         btn.classList.toggle('active');
-        dot.classList.toggle('flagged');
         playSynthBeep(587, 0.04);
     }
 
     function registerActionState(num) {
-        document.getElementById(`jump-dot-q${num}`).classList.add('answered');
         playSynthBeep(330, 0.03);
         updateRealtimeCounter();
         if(currentSubject !== 'mistakes') saveCurrentSessionProgress();
@@ -1286,7 +1268,6 @@
             const input = document.querySelector(`input[name="q${num}"][value="${data.answers[num]}"]`);
             if (input) {
                 input.checked = true;
-                document.getElementById(`jump-dot-q${num}`)?.classList.add('answered');
             }
         }
         updateRealtimeCounter();
