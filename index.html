@@ -30,14 +30,24 @@
             z-index: 1; pointer-events: none;
         }
         .split-layout {
-            display: flex; width: 100%; height: 100%;
-            position: relative; z-index: 10;
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+            overflow-x: hidden;
         }
         .brand-side {
-            flex: 1.2; background: transparent;
-            position: relative; display: flex;
-            flex-direction: column; justify-content: center;
-            padding: 60px; overflow: hidden;
+            flex: 1.2;
+            background: transparent;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+            overflow: hidden;
+            box-sizing: border-box;
         }
         .brand-content { position: relative; z-index: 10; max-width: 500px; }
         .brand-content h1 {
@@ -67,13 +77,20 @@
             100% { transform: translateY(-50%) scale(1.2); opacity: 0.8; }
         }
         .auth-side {
-            flex: 1; max-width: 550px;
+            flex: 1;
+            max-width: 550px;
             background: rgba(30,41,59,0.65);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border-left: 1px solid rgba(255,255,255,0.08);
-            display: flex; align-items: center; justify-content: center;
-            padding: 40px; position: relative; z-index: 10;
-            box-shadow: -15px 0 40px rgba(0,0,0,0.15); overflow-y: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            z-index: 10;
+            box-shadow: -15px 0 40px rgba(0,0,0,0.15);
+            overflow-y: auto;
+            box-sizing: border-box;
         }
         body.light-mode .auth-side {
             background: rgba(255,255,255,0.75);
@@ -135,11 +152,48 @@
             text-align: center;
         }
         @media (max-width: 900px) {
-            .split-layout { flex-direction: column; }
-            .brand-side { flex: none; padding: 40px 20px; height: auto; min-height: 200px; justify-content: flex-end; }
-            .brand-content h1 { font-size: 32px; }
-            .glowing-core { top: 100%; right: 50%; transform: translate(50%,-50%); width: 300px; height: 300px; }
-            .auth-side { flex: 1; max-width: 100%; border-left: none; border-top: 1px solid rgba(255,255,255,0.08); padding: 30px 20px; align-items: flex-start; }
+            #login-overlay {
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            .split-layout {
+                flex-direction: column;
+                height: auto;
+                min-height: 100%;
+            }
+            .brand-side {
+                flex: none;
+                width: 100%;
+                padding: 36px 24px 28px;
+                min-height: 180px;
+                justify-content: center;
+                align-items: flex-start;
+                overflow: visible;
+            }
+            .brand-content h1 { font-size: 28px; }
+            .brand-content p { font-size: 15px; }
+            .glowing-core {
+                top: 50%; right: -80px;
+                width: 240px; height: 240px;
+                transform: translateY(-50%);
+            }
+            .auth-side {
+                flex: none;
+                width: 100%;
+                max-width: 100%;
+                border-left: none;
+                border-top: 1px solid rgba(255,255,255,0.08);
+                padding: 32px 24px 40px;
+                box-shadow: none;
+                overflow-y: visible;
+                align-items: flex-start;
+                justify-content: flex-start;
+            }
+            .auth-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+            }
         }
         /* =============================================
            MAIN APP STYLES
