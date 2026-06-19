@@ -282,9 +282,49 @@
         .exam-tracker { position: sticky; top: 20px; z-index: 100; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); padding: 15px 25px; border-radius: 14px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--card-shadow); }
         .tracker-info h4 { margin: 0; font-size: 18px; }
         .tracker-info span { font-size: 13px; color: var(--text-muted); }
-        .tracker-pills-box { display: flex; gap: 10px; }
+        .tracker-pills-box { display: flex; gap: 10px; align-items: center; }
         .tracker-pill { background: rgba(128, 128, 128, 0.2); padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 14px; }
         .tracker-pill.timer-warning { background: #7f1d1d; color: #fecdd3; animation: pulse 1s infinite alternate; }
+
+        /* ── Pause Button ── */
+        .pause-btn {
+            border: none; cursor: pointer; color: var(--text-main);
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .pause-btn:hover { background: rgba(59,130,246,0.35); transform: scale(1.05); }
+        .pause-btn.is-paused { background: rgba(16,185,129,0.25); color: #10b981; }
+
+        /* ── Pause Overlay ── */
+        #pause-overlay {
+            position: fixed; inset: 0; z-index: 9000;
+            background: rgba(10, 15, 30, 0.92);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pause-modal {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px; padding: 52px 60px;
+            text-align: center; max-width: 440px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+            animation: pauseModalIn 0.35s cubic-bezier(0.165,0.84,0.44,1) both;
+        }
+        @keyframes pauseModalIn {
+            from { opacity: 0; transform: scale(0.88) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .pause-icon { font-size: 56px; margin-bottom: 16px; }
+        .pause-title { font-size: 26px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.5px; color: var(--text-main); }
+        .pause-subtitle { font-size: 15px; color: var(--text-muted); margin: 0 0 32px; line-height: 1.6; }
+        .pause-resume-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff; border: none; padding: 16px 40px;
+            font-size: 17px; font-weight: 800; border-radius: 14px;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+        }
+        .pause-resume-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(16,185,129,0.45); }
 
         .question-card { background: var(--card-bg); border: 2px solid var(--card-border); padding: 30px; margin-bottom: 35px; border-radius: 20px; box-shadow: var(--card-shadow); position: relative; transition: all 0.3s ease; }
         .question-card.flagged { border-color: #f59e0b !important; background-color: rgba(245, 158, 11, 0.03); }
@@ -626,6 +666,7 @@
             <div class="tracker-pills-box">
                 <div class="tracker-pill" id="exam-timer-pill">Time: 150:00</div>
                 <div class="tracker-pill" id="completion-counter">Answered: 0 / 50</div>
+                <button type="button" id="pauseResumeBtn" class="tracker-pill pause-btn" onclick="toggleExamPause()" style="display:none;">⏸ Pause</button>
             </div>
         </div>
         
@@ -645,6 +686,16 @@
 
 </div>
 
+<!-- ── PAUSE OVERLAY ─────────────────────────────────────────── -->
+<div id="pause-overlay" style="display:none;">
+    <div class="pause-modal">
+        <div class="pause-icon">⏸</div>
+        <h2 class="pause-title">Examination Paused</h2>
+        <p class="pause-subtitle">Your progress is saved. The question paper is hidden to ensure exam integrity.</p>
+        <button type="button" class="pause-resume-btn" onclick="toggleExamPause()">▶ Resume Examination</button>
+    </div>
+</div>
+
 <script>
     let currentSubject = ''; 
     let currentYear = '';
@@ -654,6 +705,7 @@
     let isShuffleMode = false;
     let activeQuestionsArray = [];
     let currentLightboxScale = 1.0;
+    let isExamPaused = false;
 
     // REAL SRI LANKAN OFFICIAL DEPT OF EXAMINATIONS G.C.E. A/L ANSWER KEYS MATRIX DATA (2016 - 2025)
     const masterMarkingKeyDB = {
@@ -751,6 +803,9 @@
     function navigateTo(targetScreen) {
         document.querySelectorAll('.app-screen').forEach(scr => scr.classList.remove('active'));
         clearInterval(examTimerInterval);
+        isExamPaused = false;
+        document.getElementById('pause-overlay').style.display = 'none';
+        document.getElementById('pauseResumeBtn').style.display = 'none';
         document.body.className = ''; 
 
         if (targetScreen === 'home') {
@@ -862,6 +917,7 @@
         qTarget.innerHTML = cardHTML;
         
         navigateTo('exam');
+        document.getElementById('pauseResumeBtn').style.display = 'inline-flex';
         startExamClockEngine();
         if(currentSubject !== 'mistakes') restoreSavedSessionProgress();
         updateRealtimeCounter();
@@ -900,6 +956,30 @@
         }, 1000);
     }
 
+    function toggleExamPause() {
+        const overlay = document.getElementById('pause-overlay');
+        const btn = document.getElementById('pauseResumeBtn');
+
+        if (!isExamPaused) {
+            // — PAUSE —
+            clearInterval(examTimerInterval);
+            examTimerInterval = null;
+            isExamPaused = true;
+            overlay.style.display = 'flex';
+            btn.innerHTML = '▶ Resume';
+            btn.classList.add('is-paused');
+            playSynthBeep(330, 0.05);
+        } else {
+            // — RESUME —
+            overlay.style.display = 'none';
+            isExamPaused = false;
+            btn.innerHTML = '⏸ Pause';
+            btn.classList.remove('is-paused');
+            startExamClockEngine();   // re-starts interval using current secondsElapsed
+            playSynthBeep(660, 0.05);
+        }
+    }
+
     function updateRealtimeCounter() {
         let count = 0;
         for (let i = 1; i <= activeQuestionsArray.length; i++) {
@@ -912,6 +992,9 @@
 
     function evaluateExamination() {
         clearInterval(examTimerInterval);
+        isExamPaused = false;
+        document.getElementById('pause-overlay').style.display = 'none';
+        document.getElementById('pauseResumeBtn').style.display = 'none';
         let rawScore = 0;
         let totalQuestions = activeQuestionsArray.length;
         
