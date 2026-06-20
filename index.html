@@ -497,6 +497,7 @@
         .btn-logout:hover { background: rgba(239,68,68,0.3); }
 
         @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+
         @media (max-width: 900px) {
             .main-grid { grid-template-columns: 1fr; gap: 15px; }
             .analytics-dashboard { grid-template-columns: repeat(2, 1fr); }
@@ -505,6 +506,50 @@
             .options-group { grid-template-columns: 1fr; gap: 8px; }
             .option-lbl { flex-direction: row; justify-content: flex-start; padding: 14px 20px; gap: 20px;}
         }
+
+        /* ══════════════════════════════════════════
+           SUBJECT LOADING OVERLAY
+        ══════════════════════════════════════════ */
+        #subject-loader {
+            position: fixed; inset: 0; z-index: 88888;
+            background: #040a18;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sloader-scene {
+            display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+            animation: sloaderFadeIn 0.35s ease both;
+        }
+        .sloader-scene.active { display: flex; }
+        @keyframes sloaderFadeIn { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
+
+        #loader-physics-canvas,
+        #loader-chemistry-canvas,
+        #loader-biology-canvas {
+            display: block;
+            width: 340px; height: 340px;
+            filter: drop-shadow(0 0 40px currentColor);
+        }
+        .sloader-label {
+            margin-top: 28px; text-align: center;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .sloader-title {
+            font-size: 36px; font-weight: 900; letter-spacing: -1px;
+            background: var(--sl-grad, linear-gradient(90deg,#6366f1,#a78bfa));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sloader-sub {
+            font-size: 14px; color: #64748b; letter-spacing: 2px; text-transform: uppercase;
+            animation: subtlePulse 1.8s ease-in-out infinite alternate;
+        }
+        @keyframes subtlePulse { from { opacity:0.4; } to { opacity:1; } }
+
+        /* per-subject gradient vars */
+        #loader-physics  { --sl-grad: linear-gradient(90deg,#6366f1,#a78bfa); }
+        #loader-chemistry{ --sl-grad: linear-gradient(90deg,#10b981,#34d399); }
+        #loader-biology  { --sl-grad: linear-gradient(90deg,#f43f5e,#fb7185); }
     </style>
 </head>
 <body class="theme-home">
@@ -686,6 +731,38 @@
 
 </div>
 
+<!-- ── SUBJECT LOADING OVERLAYS ──────────────────────────────── -->
+<div id="subject-loader" style="display:none;">
+
+    <!-- PHYSICS: Orbiting atom -->
+    <div class="sloader-scene" id="loader-physics">
+        <canvas id="loader-physics-canvas"></canvas>
+        <div class="sloader-label">
+            <span class="sloader-title">Physics</span>
+            <span class="sloader-sub">Initialising quantum matrix…</span>
+        </div>
+    </div>
+
+    <!-- CHEMISTRY: 3D rotating molecule -->
+    <div class="sloader-scene" id="loader-chemistry">
+        <canvas id="loader-chemistry-canvas"></canvas>
+        <div class="sloader-label">
+            <span class="sloader-title">Chemistry</span>
+            <span class="sloader-sub">Assembling molecular bonds…</span>
+        </div>
+    </div>
+
+    <!-- BIOLOGY: Pulsing double helix -->
+    <div class="sloader-scene" id="loader-biology">
+        <canvas id="loader-biology-canvas"></canvas>
+        <div class="sloader-label">
+            <span class="sloader-title">Biology</span>
+            <span class="sloader-sub">Decoding the genome…</span>
+        </div>
+    </div>
+
+</div>
+
 <!-- ── PAUSE OVERLAY ─────────────────────────────────────────── -->
 <div id="pause-overlay" style="display:none;">
     <div class="pause-modal">
@@ -824,7 +901,15 @@
                     html += `<button class="year-btn" onclick="launchExamination(${y})">${y} Past Paper</button>`;
                 }
                 container.innerHTML = html;
-                document.getElementById('screen-subject').classList.add('active');
+
+                // Show 3D loader for science subjects
+                if (['physics','chemistry','biology'].includes(targetScreen)) {
+                    showSubjectLoader(targetScreen, () => {
+                        document.getElementById('screen-subject').classList.add('active');
+                    });
+                } else {
+                    document.getElementById('screen-subject').classList.add('active');
+                }
             } else {
                 document.getElementById('screen-exam').classList.add('active');
             }
@@ -1500,6 +1585,389 @@
             }
         });
         observer.observe(document.getElementById('login-overlay'), { attributes: true, attributeFilter: ['style'] });
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       SUBJECT 3D LOADING ANIMATIONS
+    ══════════════════════════════════════════════════════════════ */
+
+    let _loaderAnimId = null;
+
+    function showSubjectLoader(subject, onComplete) {
+        const loaderWrap = document.getElementById('subject-loader');
+        // hide all scenes, show the right one
+        document.querySelectorAll('.sloader-scene').forEach(s => s.classList.remove('active'));
+        const scene = document.getElementById(`loader-${subject}`);
+        if (!scene) { onComplete(); return; }
+        scene.classList.add('active');
+        loaderWrap.style.display = 'flex';
+
+        // cancel any prior animation
+        if (_loaderAnimId) { cancelAnimationFrame(_loaderAnimId); _loaderAnimId = null; }
+
+        // boot the right canvas painter
+        if (subject === 'physics')   _startPhysicsLoader();
+        if (subject === 'chemistry') _startChemistryLoader();
+        if (subject === 'biology')   _startBiologyLoader();
+
+        // hide loader after 2.2 s, then fire callback
+        setTimeout(() => {
+            // fade out
+            loaderWrap.style.transition = 'opacity 0.45s ease';
+            loaderWrap.style.opacity = '0';
+            setTimeout(() => {
+                loaderWrap.style.display = 'none';
+                loaderWrap.style.opacity = '1';
+                loaderWrap.style.transition = '';
+                if (_loaderAnimId) { cancelAnimationFrame(_loaderAnimId); _loaderAnimId = null; }
+                onComplete();
+            }, 460);
+        }, 2200);
+    }
+
+    /* ── PHYSICS: 3D Bohr atom with glowing nucleus + 3 orbital rings ── */
+    function _startPhysicsLoader() {
+        const canvas = document.getElementById('loader-physics-canvas');
+        const S = 340; canvas.width = S; canvas.height = S;
+        const ctx = canvas.getContext('2d');
+        const cx = S/2, cy = S/2;
+        const t0 = performance.now();
+
+        // orbit definitions: [rx, ry, tilt, color, speed, electronSize]
+        const orbits = [
+            { rx:110, ry:38, tilt:-0.55, col:'#818cf8', speed:1.4,  eSize:7 },
+            { rx:110, ry:38, tilt: 0.55, col:'#a78bfa', speed:-1.0, eSize:7 },
+            { rx:38,  ry:110,tilt: Math.PI/2, col:'#60a5fa', speed:0.8, eSize:7 },
+        ];
+        // Particles (background stars)
+        const stars = Array.from({length:40}, () => ({
+            x: Math.random()*S, y: Math.random()*S,
+            r: Math.random()*1.4+0.3, a: Math.random()
+        }));
+
+        function frame(now) {
+            const t = (now - t0) / 1000;
+            ctx.clearRect(0, 0, S, S);
+
+            // stars
+            stars.forEach(s => {
+                s.a = 0.3 + 0.7*Math.abs(Math.sin(t*0.9 + s.x));
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(148,163,184,${s.a})`; ctx.fill();
+            });
+
+            // draw each orbit ellipse + electron
+            orbits.forEach(o => {
+                // save and rotate for tilt
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(o.tilt);
+
+                // ellipse track
+                ctx.beginPath();
+                ctx.ellipse(0, 0, o.rx, o.ry, 0, 0, Math.PI*2);
+                ctx.strokeStyle = o.col + '44';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // electron position
+                const angle = t * o.speed * Math.PI * 2;
+                const ex = Math.cos(angle) * o.rx;
+                const ey = Math.sin(angle) * o.ry;
+
+                // glow
+                const grd = ctx.createRadialGradient(ex, ey, 0, ex, ey, o.eSize*3);
+                grd.addColorStop(0, o.col + 'cc');
+                grd.addColorStop(1, o.col + '00');
+                ctx.beginPath(); ctx.arc(ex, ey, o.eSize*3, 0, Math.PI*2);
+                ctx.fillStyle = grd; ctx.fill();
+
+                // electron dot
+                ctx.beginPath(); ctx.arc(ex, ey, o.eSize, 0, Math.PI*2);
+                ctx.fillStyle = o.col; ctx.fill();
+
+                // trail
+                for (let i = 1; i <= 12; i++) {
+                    const ta = angle - (i * 0.09 * (o.speed > 0 ? 1 : -1));
+                    const tx2 = Math.cos(ta)*o.rx, ty2 = Math.sin(ta)*o.ry;
+                    ctx.beginPath(); ctx.arc(tx2, ty2, o.eSize*(1-i/13), 0, Math.PI*2);
+                    ctx.fillStyle = o.col + Math.floor((1-i/13)*80).toString(16).padStart(2,'0');
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // nucleus — pulsing sphere
+            const pulse = 1 + 0.12*Math.sin(t*4);
+            const nucR = 18 * pulse;
+            const ng = ctx.createRadialGradient(cx-4, cy-4, 0, cx, cy, nucR*2.5);
+            ng.addColorStop(0, '#c4b5fd');
+            ng.addColorStop(0.4, '#6366f1');
+            ng.addColorStop(1, '#3730a3' + '00');
+            ctx.beginPath(); ctx.arc(cx, cy, nucR*2.5, 0, Math.PI*2);
+            ctx.fillStyle = ng; ctx.fill();
+            ctx.beginPath(); ctx.arc(cx, cy, nucR, 0, Math.PI*2);
+            const ng2 = ctx.createRadialGradient(cx-5, cy-5, 0, cx, cy, nucR);
+            ng2.addColorStop(0, '#e0e7ff'); ng2.addColorStop(1, '#4f46e5');
+            ctx.fillStyle = ng2; ctx.fill();
+
+            // energy ring
+            const ringR = nucR * 1.7;
+            ctx.beginPath();
+            ctx.arc(cx, cy, ringR, 0, Math.PI*2);
+            ctx.strokeStyle = `rgba(99,102,241,${0.3+0.2*Math.sin(t*3)})`;
+            ctx.lineWidth = 2; ctx.stroke();
+
+            _loaderAnimId = requestAnimationFrame(frame);
+        }
+        _loaderAnimId = requestAnimationFrame(frame);
+    }
+
+    /* ── CHEMISTRY: 3D rotating tetrahedron molecule + bond sparks ── */
+    function _startChemistryLoader() {
+        const canvas = document.getElementById('loader-chemistry-canvas');
+        const S = 340; canvas.width = S; canvas.height = S;
+        const ctx = canvas.getContext('2d');
+        const cx = S/2, cy = S/2;
+        const t0 = performance.now();
+
+        // 3D project helper
+        function project(x,y,z,rx,ry) {
+            // rotate around Y
+            let x1 = x*Math.cos(ry) + z*Math.sin(ry);
+            let z1 = -x*Math.sin(ry) + z*Math.cos(ry);
+            // rotate around X
+            let y2 = y*Math.cos(rx) - z1*Math.sin(rx);
+            let z2 = y*Math.sin(rx) + z1*Math.cos(rx);
+            const fov = 320, d = fov/(fov+z2+80);
+            return { sx: cx+x1*d, sy: cy+y2*d, d, z:z2 };
+        }
+
+        // Methane-like tetrahedron vertices (scaled)
+        const R = 90;
+        const verts = [
+            [0, -R, 0],
+            [R*0.943, R*0.333, 0],
+            [-R*0.471, R*0.333,  R*0.816],
+            [-R*0.471, R*0.333, -R*0.816],
+        ];
+        const edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+        const atomColors = ['#34d399','#6ee7b7','#a7f3d0','#10b981'];
+        const atomR = [18,13,13,13];
+
+        // Floating bond-spark particles
+        const sparks = Array.from({length:25}, () => ({
+            t: Math.random()*Math.PI*2,
+            edge: Math.floor(Math.random()*6),
+            speed: 0.4+Math.random()*0.6,
+            col: ['#34d399','#6ee7b7','#059669'][Math.floor(Math.random()*3)]
+        }));
+
+        // background hexagons (benzene-ring aesthetic)
+        const hexes = Array.from({length:6}, (_,i) => ({
+            x: cx + 130*Math.cos(i/6*Math.PI*2),
+            y: cy + 130*Math.sin(i/6*Math.PI*2),
+            phase: i/6*Math.PI*2
+        }));
+
+        function drawHex(x,y,r,a) {
+            ctx.beginPath();
+            for(let i=0;i<6;i++){
+                const ang = i/6*Math.PI*2;
+                i===0 ? ctx.moveTo(x+r*Math.cos(ang), y+r*Math.sin(ang))
+                      : ctx.lineTo(x+r*Math.cos(ang), y+r*Math.sin(ang));
+            }
+            ctx.closePath();
+            ctx.strokeStyle=`rgba(52,211,153,${a})`; ctx.lineWidth=1; ctx.stroke();
+        }
+
+        function frame(now) {
+            const t = (now - t0) / 1000;
+            ctx.clearRect(0, 0, S, S);
+
+            const rx = 0.4 + 0.15*Math.sin(t*0.7);
+            const ry = t * 0.7;
+
+            // background hexagons
+            hexes.forEach((h,i) => {
+                const pulse = 0.06+0.04*Math.sin(t*1.5+h.phase);
+                drawHex(h.x, h.y, 16, pulse);
+            });
+
+            // project all verts
+            const pv = verts.map(([x,y,z]) => project(x,y,z,rx,ry));
+
+            // sort edges back-to-front
+            const sortedEdges = edges.map(([a,b]) => ({a,b,avgZ:(pv[a].z+pv[b].z)/2}))
+                .sort((x,y)=>x.avgZ-y.avgZ);
+
+            // draw bonds
+            sortedEdges.forEach(({a,b}) => {
+                const A=pv[a], B=pv[b];
+                const depth = (A.z+B.z)/2;
+                const alpha = 0.3+0.5*(1-(depth+100)/200);
+                const grad = ctx.createLinearGradient(A.sx,A.sy,B.sx,B.sy);
+                grad.addColorStop(0, `rgba(52,211,153,${alpha})`);
+                grad.addColorStop(0.5, `rgba(16,185,129,${alpha*1.4})`);
+                grad.addColorStop(1, `rgba(52,211,153,${alpha})`);
+                ctx.beginPath(); ctx.moveTo(A.sx,A.sy); ctx.lineTo(B.sx,B.sy);
+                ctx.strokeStyle=grad; ctx.lineWidth=3; ctx.stroke();
+            });
+
+            // spark particles along edges
+            sparks.forEach(sp => {
+                sp.t += sp.speed * 0.025;
+                const [a,b] = edges[sp.edge];
+                const A=pv[a], B=pv[b];
+                const frac = (Math.sin(sp.t)+1)/2;
+                const sx = A.sx + (B.sx-A.sx)*frac;
+                const sy = A.sy + (B.sy-A.sy)*frac;
+                const sg = ctx.createRadialGradient(sx,sy,0,sx,sy,5);
+                sg.addColorStop(0,sp.col+'ff'); sg.addColorStop(1,sp.col+'00');
+                ctx.beginPath(); ctx.arc(sx,sy,5,0,Math.PI*2);
+                ctx.fillStyle=sg; ctx.fill();
+            });
+
+            // draw atoms (sorted back to front)
+            const sortedAtoms = pv.map((p,i)=>({p,i})).sort((a,b)=>a.p.z-b.p.z);
+            sortedAtoms.forEach(({p,i}) => {
+                const r = atomR[i] * p.d;
+                const glow = ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,r*3);
+                glow.addColorStop(0, atomColors[i]+'99');
+                glow.addColorStop(1, atomColors[i]+'00');
+                ctx.beginPath(); ctx.arc(p.sx,p.sy,r*3,0,Math.PI*2);
+                ctx.fillStyle=glow; ctx.fill();
+
+                const ag = ctx.createRadialGradient(p.sx-r*0.3,p.sy-r*0.3,0,p.sx,p.sy,r);
+                ag.addColorStop(0,'#f0fdf4'); ag.addColorStop(1,atomColors[i]);
+                ctx.beginPath(); ctx.arc(p.sx,p.sy,r,0,Math.PI*2);
+                ctx.fillStyle=ag; ctx.fill();
+
+                // atom label
+                ctx.fillStyle='#fff'; ctx.font=`bold ${Math.max(9,r*0.7)}px sans-serif`;
+                ctx.textAlign='center'; ctx.textBaseline='middle';
+                ctx.fillText(i===0?'C':'H', p.sx, p.sy);
+            });
+
+            _loaderAnimId = requestAnimationFrame(frame);
+        }
+        _loaderAnimId = requestAnimationFrame(frame);
+    }
+
+    /* ── BIOLOGY: 3D Double Helix DNA strand ── */
+    function _startBiologyLoader() {
+        const canvas = document.getElementById('loader-biology-canvas');
+        const S = 340; canvas.width = S; canvas.height = S;
+        const ctx = canvas.getContext('2d');
+        const cx = S/2, cy = S/2;
+        const t0 = performance.now();
+
+        const PAIRS = 16;       // base-pair count
+        const HELIX_H = 240;    // total height of helix
+        const HELIX_R = 80;     // radius of helix
+
+        const baseColors = [
+            ['#f43f5e','#fb7185'],  // A-T  red
+            ['#a855f7','#c084fc'],  // T-A  purple
+            ['#f59e0b','#fbbf24'],  // G-C  amber
+            ['#22d3ee','#67e8f9'],  // C-G  cyan
+        ];
+
+        function frame(now) {
+            const t = (now - t0) / 1000;
+            ctx.clearRect(0, 0, S, S);
+
+            // rotating tilt for slight 3D feel
+            const tilt = 0.18*Math.sin(t*0.5);
+
+            // collect all drawable elements and depth-sort
+            const items = [];
+            const yTop = cy - HELIX_H/2;
+
+            for (let i = 0; i < PAIRS; i++) {
+                const frac = i / (PAIRS-1);
+                const baseAngle = (frac * Math.PI*4) - t*1.2; // 2 full turns
+                const yPos = yTop + frac * HELIX_H;
+
+                // strand 1 (left backbone)
+                const x1 = HELIX_R * Math.cos(baseAngle);
+                const z1 = HELIX_R * Math.sin(baseAngle);
+                // tilt
+                const yd1 = yPos + z1 * tilt;
+                const depth1 = (z1 + HELIX_R) / (HELIX_R*2);
+
+                // strand 2 (right backbone, offset by π)
+                const x2 = HELIX_R * Math.cos(baseAngle + Math.PI);
+                const z2 = HELIX_R * Math.sin(baseAngle + Math.PI);
+                const yd2 = yPos + z2 * tilt;
+                const depth2 = (z2 + HELIX_R) / (HELIX_R*2);
+
+                const pair = baseColors[i % 4];
+
+                items.push({ type:'rung', x1:cx+x1, y1:yd1, x2:cx+x2, y2:yd2,
+                             z:(z1+z2)/2, pair, frac });
+                items.push({ type:'node', x:cx+x1, y:yd1, z:z1, col:pair[0], depth:depth1, i, strand:0 });
+                items.push({ type:'node', x:cx+x2, y:yd2, z:z2, col:pair[1], depth:depth2, i, strand:1 });
+            }
+
+            // sort back-to-front
+            items.sort((a,b)=>a.z-b.z);
+
+            // draw backbone curves (full splines approximated as segment lines)
+            // draw them as two sweeping paths FIRST (always behind nodes)
+            ['s0','s1'].forEach(side => {
+                ctx.beginPath();
+                for (let i = 0; i < PAIRS; i++) {
+                    const frac = i/(PAIRS-1);
+                    const ba = (frac*Math.PI*4) - t*1.2 + (side==='s1' ? Math.PI : 0);
+                    const xn = cx + HELIX_R*Math.cos(ba);
+                    const zn = HELIX_R*Math.sin(ba);
+                    const yn = yTop + frac*HELIX_H + zn*tilt;
+                    i===0 ? ctx.moveTo(xn,yn) : ctx.lineTo(xn,yn);
+                }
+                ctx.strokeStyle = side==='s0' ? 'rgba(244,63,94,0.25)' : 'rgba(168,85,247,0.25)';
+                ctx.lineWidth = 3; ctx.stroke();
+            });
+
+            // draw sorted items
+            items.forEach(item => {
+                if (item.type === 'rung') {
+                    const vis = 0.15 + 0.55*((item.z+HELIX_R)/(HELIX_R*2));
+                    const grd = ctx.createLinearGradient(item.x1,item.y1,item.x2,item.y2);
+                    grd.addColorStop(0, item.pair[0]+Math.floor(vis*200).toString(16).padStart(2,'0'));
+                    grd.addColorStop(0.5,'rgba(255,255,255,'+vis*0.4+')');
+                    grd.addColorStop(1, item.pair[1]+Math.floor(vis*200).toString(16).padStart(2,'0'));
+                    ctx.beginPath(); ctx.moveTo(item.x1,item.y1); ctx.lineTo(item.x2,item.y2);
+                    ctx.strokeStyle=grd; ctx.lineWidth=2.5; ctx.stroke();
+
+                    // centre base-pair dot
+                    const mx=(item.x1+item.x2)/2, my=(item.y1+item.y2)/2;
+                    ctx.beginPath(); ctx.arc(mx,my,3.5,0,Math.PI*2);
+                    ctx.fillStyle=`rgba(255,255,255,${vis*0.6})`; ctx.fill();
+                } else {
+                    // nucleotide node
+                    const r = 6 + 4*item.depth;
+                    const glw = ctx.createRadialGradient(item.x,item.y,0,item.x,item.y,r*2.5);
+                    glw.addColorStop(0,item.col+'bb'); glw.addColorStop(1,item.col+'00');
+                    ctx.beginPath(); ctx.arc(item.x,item.y,r*2.5,0,Math.PI*2);
+                    ctx.fillStyle=glw; ctx.fill();
+
+                    const ag = ctx.createRadialGradient(item.x-r*0.25,item.y-r*0.25,0,item.x,item.y,r);
+                    ag.addColorStop(0,'rgba(255,255,255,0.9)'); ag.addColorStop(1,item.col);
+                    ctx.beginPath(); ctx.arc(item.x,item.y,r,0,Math.PI*2);
+                    ctx.fillStyle=ag; ctx.fill();
+                }
+            });
+
+            // centre glow aura
+            const cg = ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+            cg.addColorStop(0,'rgba(244,63,94,0.08)'); cg.addColorStop(1,'transparent');
+            ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2);
+            ctx.fillStyle=cg; ctx.fill();
+
+            _loaderAnimId = requestAnimationFrame(frame);
+        }
+        _loaderAnimId = requestAnimationFrame(frame);
     }
 </script>
 </body>
