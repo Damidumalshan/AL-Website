@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics — A/L Excellence Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-physics">
+
+<!-- ── THEME TOGGLE ────────────────────────────────────────────── -->
+<button class="theme-toggle-fab" onclick="toggleCosmicLightScheme()">🌗</button>
+
+<!-- ── USER BAR ────────────────────────────────────────────────── -->
+<div class="user-bar" id="user-bar" style="display:none;">
+    <span>👤 <span class="user-name" id="user-name-display"></span></span>
+    <button class="btn-logout" onclick="doLogout()">Logout</button>
+</div>
+
+<!-- ── LIGHTBOX ─────────────────────────────────────────────────── -->
+<div id="global-lightbox" class="lightbox-modal">
+    <button class="lightbox-close" onclick="closeLightboxModal()">✕</button>
+    <div class="lightbox-container" onclick="closeLightboxModal()">
+        <img id="lightbox-image-target" class="lightbox-img" src="" alt="Zoomed View" onclick="event.stopPropagation()">
+    </div>
+    <div class="lightbox-controls">
+        <button class="lightbox-btn" onclick="adjustLightboxZoom(0.2)">➕ Zoom In</button>
+        <button class="lightbox-btn" onclick="adjustLightboxZoom(-0.2)">➖ Zoom Out</button>
+        <button class="lightbox-btn" onclick="resetLightboxZoom()">🔄 Reset</button>
+    </div>
+</div>
+
+<!-- ── PAUSE OVERLAY ────────────────────────────────────────────── -->
+<div id="pause-overlay" style="display:none;">
+    <div class="pause-modal">
+        <div class="pause-icon">⏸</div>
+        <h2 class="pause-title">Examination Paused</h2>
+        <p class="pause-subtitle">Your progress is saved. The question paper is hidden to ensure exam integrity.</p>
+        <button type="button" class="pause-resume-btn" onclick="toggleExamPause()">▶ Resume Examination</button>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ──────────────────────────────────────────────── -->
+<div class="container">
+
+    <!-- SCREEN: Year / Mode Selection -->
+    <div id="screen-subject" class="app-screen active">
+        <div class="back-nav">
+            <a href="dashboard.html" class="btn-back">← Back to Dashboard</a>
+        </div>
+
+        <h1>⚛️ Physics Portal</h1>
+        <p class="subtitle">Select a past paper year or trigger a shuffled conceptual evaluation</p>
+
+        <!-- Physics-specific stats row -->
+        <div class="analytics-dashboard" id="physics-stats-row">
+            <div class="stat-card"><div class="stat-val" id="phys-attempted">0</div><div class="stat-lbl">Papers Done</div></div>
+            <div class="stat-card"><div class="stat-val" id="phys-accuracy">0%</div><div class="stat-lbl">Avg Accuracy</div></div>
+            <div class="stat-card"><div class="stat-val" id="phys-grade" style="color:#10b981;">-</div><div class="stat-lbl">Best Grade</div></div>
+            <div class="stat-card"><div class="stat-val" id="phys-mistakes" style="color:#f59e0b;">0</div><div class="stat-lbl">Mistake Bank</div></div>
+        </div>
+
+        <div class="years-grid" id="years-container"></div>
+    </div>
+
+    <!-- SCREEN: Active Exam -->
+    <div id="screen-exam" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="exitExamConfirm()">← Exit Examination</button>
+        </div>
+
+        <h1 id="exam-heading">Exam Workspace</h1>
+        <p class="subtitle" id="exam-subheading">Physics — Multiple Choice Evaluation Matrix</p>
+
+        <div class="exam-tracker">
+            <div class="tracker-info">
+                <h4 id="tracker-title">Physics A/L Matrix</h4>
+                <span>All questions must be attempted before final grading</span>
+            </div>
+            <div class="tracker-pills-box">
+                <div class="tracker-pill" id="exam-timer-pill">Time: 150:00</div>
+                <div class="tracker-pill" id="completion-counter">Answered: 0 / 50</div>
+                <button type="button" id="pauseResumeBtn" class="tracker-pill pause-btn" onclick="toggleExamPause()" style="display:none;">⏸ Pause</button>
+            </div>
+        </div>
+
+        <div id="scoreDisplay" class="score-board"></div>
+
+        <form id="paperForm">
+            <div class="workspace-layout">
+                <div class="questions-area" id="dynamic-questions-target"></div>
+            </div>
+            <div class="footer-action">
+                <button type="button" id="submitBtn" class="submit-btn" onclick="evaluateExamination()">Submit Examination Paper</button>
+            </div>
+        </form>
+    </div>
+
+</div><!-- /.container -->
+
+<script>
+    // =============================================
+    // PHYSICS PAGE — FULL STANDALONE LOGIC
+    // =============================================
+
+    // ── State ────────────────────────────────────
+    const SUBJECT                  = 'physics';
+    let currentYear                = '';
+    let examTimerInterval          = null;
+    let secondsElapsed             = 0;
+    const totalExamDurationSeconds = 150 * 60;
+    let isShuffleMode              = false;
+    let activeQuestionsArray       = [];
+    let currentLightboxScale       = 1.0;
+    let isExamPaused               = false;
+
+    // ── Supabase credentials ──────────────────────
+    const SUPABASE_URL  = 'https://srhcbgmbddpyqxioebrh.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaGNiZ21iZGRweXF4aW9lYnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MzA0MzgsImV4cCI6MjA5NzIwNjQzOH0.vx4N971y06akZ448md5ZpjnEohFvWvQq2HwC7VBCRL4';
+
+    // ── In-memory state ───────────────────────────
+    let sb;
+    let currentUser;
+    let _mistakeBank = [];
+    let _stats       = { attempted: 0, totalScore: 0, bestPercentage: 0, bestGrade: '-' };
+
+    // ── Official Physics Marking Key Matrix (2016–2025) ──
+    const physicsMarkingKeyDB = {
+        2016: {1:"4",2:"2",3:"5",4:"2",5:"1",6:"3",7:"3",8:"4",9:"5",10:"2",11:"4",12:"1",13:"5",14:"2",15:"1",16:"5",17:"3",18:"3",19:"1",20:"4",21:"2",22:"3",23:"4",24:"1",25:"5",26:"4",27:"5",28:"3",29:"2",30:"2",31:"4",32:"5",33:"1",34:"2",35:"1",36:"3",37:"5",38:"4",39:"2",40:"3",41:"1",42:"4",43:"5",44:"4",45:"3",46:"1",47:"3",48:"2",49:"5",50:"1"},
+        2017: {1:"3",2:"4",3:"5",4:"2",5:"1",6:"3",7:"4",8:"1",9:"2",10:"5",11:"2",12:"4",13:"1",14:"3",15:"5",16:"2",17:"4",18:"1",19:"5",20:"3",21:"5",22:"2",23:"4",24:"1",25:"3",26:"4",27:"1",28:"5",29:"3",30:"2",31:"3",32:"1",33:"5",34:"2",35:"4",36:"1",37:"5",38:"2",39:"4",40:"3",41:"2",42:"5",43:"1",44:"3",45:"4",46:"5",47:"1",48:"2",49:"3",50:"4"},
+        2018: {1:"2",2:"5",3:"4",4:"1",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"5",12:"2",13:"4",14:"1",15:"3",16:"1",17:"5",18:"2",19:"4",20:"3",21:"4",22:"1",23:"5",24:"2",25:"3",26:"2",27:"4",28:"1",29:"5",30:"3",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"5",38:"2",39:"4",40:"1",41:"4",42:"1",43:"5",44:"2",45:"3",46:"2",47:"4",48:"1",49:"5",50:"3"},
+        2019: {1:"4",2:"2",3:"5",4:"1",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"2",12:"5",13:"4",14:"1",15:"3",16:"3",17:"1",18:"5",19:"2",20:"4",21:"1",22:"3",23:"5",24:"2",25:"4",26:"4",27:"1",28:"3",29:"5",30:"2",31:"2",32:"4",33:"1",34:"3",35:"5",36:"5",37:"2",38:"4",39:"1",40:"3",41:"3",42:"5",43:"2",44:"4",45:"1",46:"1",47:"3",48:"5",49:"2",50:"4"},
+        2020: {1:"5",2:"3",3:"1",4:"4",5:"2",6:"1",7:"5",8:"3",9:"4",10:"2",11:"3",12:"1",13:"5",14:"4",15:"2",16:"4",17:"2",18:"1",19:"5",20:"3",21:"2",22:"4",23:"1",24:"5",25:"3",26:"1",27:"3",28:"5",29:"4",30:"2",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"1",38:"5",39:"4",40:"2",41:"4",42:"2",43:"1",44:"5",45:"3",46:"2",47:"4",48:"1",49:"3",50:"5"},
+        2021: {1:"1",2:"4",3:"2",4:"5",5:"3",6:"2",7:"5",8:"1",9:"4",10:"3",11:"4",12:"2",13:"5",14:"1",15:"3",16:"5",17:"1",18:"4",19:"2",20:"3",21:"3",22:"5",23:"1",24:"4",25:"2",26:"2",27:"4",28:"5",29:"1",30:"3",31:"1",32:"3",33:"4",34:"5",35:"2",36:"4",37:"2",38:"5",39:"1",40:"3",41:"5",42:"1",43:"3",44:"2",45:"4",46:"3",47:"5",48:"2",49:"4",50:"1"},
+        2022: {1:"2",2:"5",3:"1",4:"3",5:"4",6:"5",7:"2",8:"4",9:"1",10:"3",11:"1",12:"4",13:"2",14:"5",15:"3",16:"4",17:"1",18:"5",19:"3",20:"2",21:"5",22:"2",23:"4",24:"1",25:"3",26:"3",27:"5",28:"1",29:"4",30:"2",31:"2",32:"4",33:"5",34:"3",35:"1",36:"1",37:"3",38:"2",39:"5",40:"4",41:"4",42:"1",43:"3",44:"2",45:"5",46:"5",47:"2",48:"4",49:"1",50:"3"},
+        2023: {1:"4",2:"1",3:"3",4:"5",5:"2",6:"3",7:"1",8:"4",9:"2",10:"5",11:"5",12:"2",13:"4",14:"1",15:"3",16:"2",17:"5",18:"1",19:"3",20:"4",21:"1",22:"3",23:"5",24:"4",25:"2",26:"4",27:"2",28:"1",29:"5",30:"3",31:"3",32:"5",33:"2",34:"1",35:"4",36:"5",37:"1",38:"4",39:"2",40:"3",41:"2",42:"4",43:"1",44:"3",45:"5",46:"1",47:"5",48:"3",49:"4",50:"2"},
+        2024: {1:"5",2:"2",3:"4",4:"1",5:"3",6:"4",7:"2",8:"5",9:"1",10:"3",11:"2",12:"5",13:"3",14:"4",15:"1",16:"1",17:"4",18:"2",19:"5",20:"3",21:"3",22:"1",23:"4",24:"2",25:"5",26:"5",27:"3",28:"1",29:"4",30:"2",31:"4",32:"1",33:"5",34:"3",35:"2",36:"2",37:"5",38:"3",39:"1",40:"4",41:"1",42:"3",43:"5",44:"2",45:"4",46:"3",47:"1",48:"4",49:"5",50:"2"},
+        2025: {1:"3",2:"4",3:"1",4:"5",5:"2",6:"1",7:"3",8:"5",9:"2",10:"4",11:"5",12:"2",13:"4",14:"1",15:"3",16:"2",17:"5",18:"1",19:"4",20:"3",21:"4",22:"1",23:"3",24:"5",25:"2",26:"3",27:"5",28:"2",29:"1",30:"4",31:"5",32:"2",33:"1",34:"4",35:"3",36:"1",37:"4",38:"2",39:"5",40:"3",41:"2",42:"5",43:"4",44:"1",45:"3",46:"4",47:"2",48:"5",49:"3",50:"1"}
+    };
+
+    function getCorrectAnswer(year, questionIndex) {
+        return (physicsMarkingKeyDB[year] && physicsMarkingKeyDB[year][questionIndex])
+            ? physicsMarkingKeyDB[year][questionIndex]
+            : "1";
+    }
+
+    // =============================================
+    // BOOT — load Supabase SDK, then check session
+    // =============================================
+    (function loadSupabase() {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        s.onload = bootApp;
+        document.head.appendChild(s);
+    })();
+
+    async function bootApp() {
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        // Restore theme preference
+        if (localStorage.getItem('lightModeConfig') === 'true') {
+            document.body.classList.add('light-mode');
+        }
+
+        // ── SESSION CHECK ─────────────────────────
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) {
+            window.location.replace('index.html');
+            return;
+        }
+        currentUser = session.user;
+
+        // Redirect on future sign-out
+        sb.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_OUT') {
+                window.location.replace('index.html');
+            }
+        });
+
+        await loadUserData();
+        renderPhysicsStats();
+        buildYearGrid();
+        showUserBar();
+    }
+
+    // ── User bar ──────────────────────────────────
+    function showUserBar() {
+        const bar = document.getElementById('user-bar');
+        if (bar) {
+            bar.style.display = 'flex';
+            const nameEl = document.getElementById('user-name-display');
+            if (nameEl && currentUser) {
+                nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email;
+            }
+        }
+    }
+
+    async function doLogout() {
+        await sb.auth.signOut();
+        // onAuthStateChange handles redirect
+    }
+
+    // =============================================
+    // SUPABASE DATA LAYER
+    // =============================================
+
+    async function loadUserData() {
+        if (!currentUser) return;
+        const uid = currentUser.id;
+
+        const { data: statsRow } = await sb
+            .from('user_stats')
+            .select('*')
+            .eq('user_id', uid)
+            .single();
+
+        if (statsRow) {
+            _stats = {
+                attempted:      statsRow.attempted       || 0,
+                totalScore:     statsRow.total_score     || 0,
+                bestPercentage: statsRow.best_percentage || 0,
+                bestGrade:      statsRow.best_grade      || '-'
+            };
+        }
+
+        const { data: mistakes } = await sb
+            .from('mistake_bank')
+            .select('*')
+            .eq('user_id', uid)
+            .eq('subject', SUBJECT)
+            .order('created_at', { ascending: true });
+
+        if (mistakes) {
+            _mistakeBank = mistakes.map(r => ({
+                origIndex: r.question_index,
+                year:      r.year,
+                subject:   r.subject
+            }));
+        }
+    }
+
+    async function saveStats() {
+        if (!currentUser) return;
+        await sb.from('user_stats').upsert({
+            user_id:         currentUser.id,
+            attempted:       _stats.attempted,
+            total_score:     _stats.totalScore,
+            best_percentage: _stats.bestPercentage,
+            best_grade:      _stats.bestGrade,
+            updated_at:      new Date().toISOString()
+        }, { onConflict: 'user_id' });
+    }
+
+    async function saveMistakeBank() {
+        if (!currentUser) return;
+        const uid = currentUser.id;
+
+        await sb.from('mistake_bank').delete()
+            .eq('user_id', uid)
+            .eq('subject', SUBJECT);
+
+        if (_mistakeBank.length > 0) {
+            const rows = _mistakeBank.map(m => ({
+                user_id:        uid,
+                question_index: m.origIndex,
+                year:           m.year,
+                subject:        SUBJECT,
+                created_at:     new Date().toISOString()
+            }));
+            await sb.from('mistake_bank').insert(rows);
+        }
+    }
+
+    async function saveCurrentSessionProgress() {
+        if (!currentUser) return;
+        const state = {};
+        for (let i = 1; i <= activeQuestionsArray.length; i++) {
+            const rad = document.querySelector(`input[name="q${i}"]:checked`);
+            if (rad) state[i] = rad.value;
+        }
+        await sb.from('exam_progress').upsert({
+            user_id:  currentUser.id,
+            subject:  SUBJECT,
+            year:     String(currentYear),
+            answers:  state,
+            saved_at: new Date().toISOString()
+        }, { onConflict: 'user_id,subject,year' });
+    }
+
+    async function restoreSavedSessionProgress() {
+        if (!currentUser) return;
+        const { data } = await sb
+            .from('exam_progress')
+            .select('answers')
+            .eq('user_id', currentUser.id)
+            .eq('subject', SUBJECT)
+            .eq('year', String(currentYear))
+            .single();
+
+        if (!data?.answers) return;
+        for (const num in data.answers) {
+            const input = document.querySelector(`input[name="q${num}"][value="${data.answers[num]}"]`);
+            if (input) input.checked = true;
+        }
+        updateRealtimeCounter();
+    }
+
+    async function clearSessionProgress() {
+        if (!currentUser) return;
+        await sb.from('exam_progress')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('subject', SUBJECT)
+            .eq('year', String(currentYear));
+    }
+
+    // =============================================
+    // UI — STATS PANEL
+    // =============================================
+    function renderPhysicsStats() {
+        document.getElementById('phys-attempted').innerText = _stats.attempted;
+        document.getElementById('phys-accuracy').innerText  =
+            _stats.attempted > 0
+                ? Math.round(_stats.totalScore / (_stats.attempted * 50) * 100) + '%'
+                : '0%';
+        document.getElementById('phys-grade').innerText    = _stats.bestGrade;
+        document.getElementById('phys-mistakes').innerText = _mistakeBank.length;
+    }
+
+    // =============================================
+    // YEAR / MODE GRID
+    // =============================================
+    function buildYearGrid() {
+        const container = document.getElementById('years-container');
+        let html = `<button class="year-btn shuffle-btn" onclick="launchShuffleExamEngine()">🔀 Infinite Shuffle Mock</button>`;
+        if (_mistakeBank.length > 0) {
+            html += `<button class="year-btn" style="border-color:rgba(245,158,11,0.5);color:#f59e0b;" onclick="launchMistakeBankPortal()">📂 Mistake Bank (${_mistakeBank.length})</button>`;
+        }
+        for (let y = 2016; y <= 2025; y++) {
+            html += `<button class="year-btn" onclick="launchExamination(${y})">${y} Past Paper</button>`;
+        }
+        container.innerHTML = html;
+    }
+
+    // =============================================
+    // EXAM LAUNCHERS
+    // =============================================
+    function launchExamination(year) {
+        currentYear          = year;
+        isShuffleMode        = false;
+        activeQuestionsArray = [];
+        for (let i = 1; i <= 50; i++) {
+            activeQuestionsArray.push({ index: i, year: year, subject: SUBJECT });
+        }
+        buildExamDomCanvas(false);
+    }
+
+    function launchShuffleExamEngine() {
+        isShuffleMode        = true;
+        currentYear          = 'Shuffled';
+        activeQuestionsArray = [];
+        for (let i = 1; i <= 50; i++) {
+            const randomYear = Math.floor(Math.random() * (2025 - 2016 + 1)) + 2016;
+            activeQuestionsArray.push({ index: i, year: randomYear, subject: SUBJECT });
+        }
+        buildExamDomCanvas(false);
+    }
+
+    function launchMistakeBankPortal() {
+        if (_mistakeBank.length === 0) {
+            alert("Your Physics Mistake Bank is empty! Answer questions incorrectly to populate it.");
+            return;
+        }
+        isShuffleMode        = false;
+        currentYear          = 'Revision';
+        activeQuestionsArray = _mistakeBank.slice(0, 50).map((item, index) => ({
+            index:        item.origIndex,
+            year:         item.year,
+            subject:      SUBJECT,
+            displayIndex: index + 1
+        }));
+        buildExamDomCanvas(true);
+    }
+
+    // =============================================
+    // EXAM DOM BUILDER
+    // =============================================
+    function buildExamDomCanvas(isMistakeMode) {
+        secondsElapsed = 0;
+
+        const heading = isMistakeMode
+            ? 'Physics Mistake Bank Revision'
+            : (isShuffleMode ? 'Infinite Shuffle Physics Mock' : `${currentYear} A/L Physics Canvas`);
+
+        document.getElementById('exam-heading').innerText    = heading;
+        document.getElementById('exam-subheading').innerText =
+            isMistakeMode ? 'Targeted Revision — Physics' : 'Physics — Multiple Choice Evaluation Matrix';
+        document.getElementById('tracker-title').innerText   =
+            isMistakeMode ? 'Mistake Bank Revision' : `Physics A/L ${isShuffleMode ? 'Shuffle' : currentYear}`;
+
+        document.getElementById('scoreDisplay').style.display = 'none';
+        document.getElementById('submitBtn').style.display    = 'inline-block';
+        document.getElementById('submitBtn').style.opacity    = '1';
+
+        const qTarget = document.getElementById('dynamic-questions-target');
+        let cardHTML  = '';
+
+        activeQuestionsArray.forEach((q, loopIdx) => {
+            const num            = loopIdx + 1;
+            const questionPath   = `physics_questions/p${q.year}_q${q.index}.png`;
+            const commentaryPath = `physics_commentary/p${q.year}_q${q.index}.png`;
+
+            cardHTML += `
+                <div class="question-card" id="q${num}-block">
+                    <div class="card-header-actions">
+                        <span class="question-meta" id="scroll-target-q${num}">Question ${num} (${q.year} Matrix)</span>
+                        <button type="button" class="flag-btn" id="flag-q${num}" onclick="toggleFlagTracker(${num})">🔖</button>
+                    </div>
+
+                    <div class="img-zoom-wrapper" onclick="openLightboxModal('${questionPath}')">
+                        <img class="question-image"
+                             src="${questionPath}"
+                             loading="lazy"
+                             onload="this.classList.add('image-loaded')"
+                             alt="Exam Question Graphic"
+                             onerror="this.parentNode.style.display='none';">
+                    </div>
+
+                    <div class="options-group" onchange="registerActionState(${num})">
+                        <label class="option-lbl"><input type="radio" name="q${num}" value="1">(1)</label>
+                        <label class="option-lbl"><input type="radio" name="q${num}" value="2">(2)</label>
+                        <label class="option-lbl"><input type="radio" name="q${num}" value="3">(3)</label>
+                        <label class="option-lbl"><input type="radio" name="q${num}" value="4">(4)</label>
+                        <label class="option-lbl"><input type="radio" name="q${num}" value="5">(5)</label>
+                    </div>
+
+                    <div class="status-badge" id="status-q${num}"></div>
+
+                    <div class="commentary-box" id="commentary-q${num}">
+                        <div class="commentary-title">⚛️ Solutions Commentary Vector:</div>
+                        <div class="img-zoom-wrapper" onclick="openLightboxModal(this.querySelector('.commentary-image').src)">
+                            <img class="commentary-image"
+                                 data-src="${commentaryPath}"
+                                 onload="this.classList.add('image-loaded')"
+                                 alt="Commentary Solution Asset"
+                                 onerror="this.parentNode.style.display='none';">
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        qTarget.innerHTML = cardHTML;
+        showExamScreen();
+        document.getElementById('pauseResumeBtn').style.display = 'inline-flex';
+        startExamClockEngine();
+        if (!isMistakeMode) restoreSavedSessionProgress();
+        updateRealtimeCounter();
+    }
+
+    // ── Screen navigation ─────────────────────────
+    function showExamScreen() {
+        document.getElementById('screen-subject').classList.remove('active');
+        document.getElementById('screen-exam').classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showSubjectScreen() {
+        clearInterval(examTimerInterval);
+        examTimerInterval = null;
+        isExamPaused      = false;
+        document.getElementById('pause-overlay').style.display  = 'none';
+        document.getElementById('pauseResumeBtn').style.display = 'none';
+        document.getElementById('screen-exam').classList.remove('active');
+        document.getElementById('screen-subject').classList.add('active');
+        buildYearGrid();
+        renderPhysicsStats();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function exitExamConfirm() {
+        if (confirm("Are you sure you want to exit this examination? Your current answers will be lost.")) {
+            showSubjectScreen();
+        }
+    }
+
+    // =============================================
+    // EXAM LOGIC
+    // =============================================
+    function registerActionState(num) {
+        playSynthBeep(330, 0.03);
+        updateRealtimeCounter();
+        if (currentYear !== 'Revision') saveCurrentSessionProgress();
+    }
+
+    function startExamClockEngine() {
+        const timerPill = document.getElementById('exam-timer-pill');
+        timerPill.classList.remove('timer-warning');
+        examTimerInterval = setInterval(() => {
+            secondsElapsed++;
+            const remaining = totalExamDurationSeconds - secondsElapsed;
+            if (remaining <= 0) {
+                clearInterval(examTimerInterval);
+                evaluateExamination();
+                return;
+            }
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            timerPill.innerText = `Time: ${mins}:${secs < 10 ? '0' + secs : secs}`;
+            if (remaining < 300) timerPill.classList.add('timer-warning');
+        }, 1000);
+    }
+
+    function toggleExamPause() {
+        const overlay = document.getElementById('pause-overlay');
+        const btn     = document.getElementById('pauseResumeBtn');
+
+        if (!isExamPaused) {
+            clearInterval(examTimerInterval);
+            examTimerInterval    = null;
+            isExamPaused         = true;
+            overlay.style.display = 'flex';
+            btn.innerHTML        = '▶ Resume';
+            btn.classList.add('is-paused');
+            playSynthBeep(330, 0.05);
+        } else {
+            overlay.style.display = 'none';
+            isExamPaused          = false;
+            btn.innerHTML         = '⏸ Pause';
+            btn.classList.remove('is-paused');
+            startExamClockEngine();
+            playSynthBeep(660, 0.05);
+        }
+    }
+
+    function updateRealtimeCounter() {
+        let count = 0;
+        for (let i = 1; i <= activeQuestionsArray.length; i++) {
+            if (document.querySelector(`input[name="q${i}"]:checked`)) count++;
+        }
+        document.getElementById('completion-counter').innerText =
+            `Answered: ${count} / ${activeQuestionsArray.length}`;
+    }
+
+    function toggleFlagTracker(num) {
+        document.getElementById(`q${num}-block`).classList.toggle('flagged');
+        document.getElementById(`flag-q${num}`).classList.toggle('active');
+        playSynthBeep(587, 0.04);
+    }
+
+    // ── Evaluate & Grade ──────────────────────────
+    function evaluateExamination() {
+        clearInterval(examTimerInterval);
+        isExamPaused = false;
+        document.getElementById('pause-overlay').style.display  = 'none';
+        document.getElementById('pauseResumeBtn').style.display = 'none';
+
+        let rawScore         = 0;
+        const totalQuestions = activeQuestionsArray.length;
+        const isMistakeMode  = (currentYear === 'Revision');
+        let mistakeBank      = [..._mistakeBank];
+
+        const blockAnalysis = {
+            core:      { c: 0, t: 0 },
+            secondary: { c: 0, t: 0 },
+            advanced:  { c: 0, t: 0 }
+        };
+
+        activeQuestionsArray.forEach((q, loopIdx) => {
+            const num           = loopIdx + 1;
+            const correctAnswer = getCorrectAnswer(q.year, q.index);
+            const selectedInput = document.querySelector(`input[name="q${num}"]:checked`);
+            const blockElement  = document.getElementById(`q${num}-block`);
+            const badgeElement  = document.getElementById(`status-q${num}`);
+            const commentaryEl  = document.getElementById(`commentary-q${num}`);
+
+            // Reveal commentary image (lazy-loaded via data-src)
+            if (commentaryEl) {
+                commentaryEl.style.display = 'block';
+                const commImg = commentaryEl.querySelector('.commentary-image');
+                if (commImg && commImg.getAttribute('data-src')) {
+                    commImg.src = commImg.getAttribute('data-src');
+                    commImg.removeAttribute('data-src');
+                }
+            }
+
+            // Disable all radio inputs
+            blockElement.querySelectorAll('input[type="radio"]').forEach(r => r.disabled = true);
+
+            const chosenVal = selectedInput ? selectedInput.value : null;
+            const isCorrect = (chosenVal === correctAnswer || correctAnswer === "ALL");
+
+            const cat = num <= 10 ? 'core' : (num <= 20 ? 'secondary' : 'advanced');
+            blockAnalysis[cat].t++;
+
+            if (isCorrect) {
+                rawScore++;
+                blockAnalysis[cat].c++;
+                blockElement.classList.add('card-correct');
+                badgeElement.innerHTML = correctAnswer === "ALL"
+                    ? `✅ CORRECT (All Options Valid) — Selected: (${chosenVal || 'None'})`
+                    : `✅ CORRECT — Selected: (${chosenVal})`;
+                badgeElement.style.color = "#10b981";
+
+                // Remove from mistake bank if in revision mode
+                if (isMistakeMode) {
+                    mistakeBank = mistakeBank.filter(item =>
+                        !(item.origIndex === q.index && item.year === q.year));
+                }
+            } else {
+                blockElement.classList.add('card-wrong');
+                badgeElement.innerHTML =
+                    `❌ INCORRECT — Correct Answer: (${correctAnswer}) | Selected: ${chosenVal ? '(' + chosenVal + ')' : 'None Selected'}`;
+                badgeElement.style.color = "#ef4444";
+                triggerHapticPulse(50);
+
+                // Add to mistake bank if not already present
+                if (!isMistakeMode) {
+                    const duplicate = mistakeBank.some(item =>
+                        item.origIndex === q.index && item.year === q.year);
+                    if (!duplicate) {
+                        mistakeBank.push({ origIndex: q.index, year: q.year, subject: SUBJECT });
+                    }
+                }
+            }
+
+            badgeElement.style.display = 'block';
+
+            // Highlight correct / wrong labels
+            blockElement.querySelectorAll('.option-lbl').forEach(lbl => {
+                const val = lbl.querySelector('input').value;
+                if (val === correctAnswer || correctAnswer === "ALL") lbl.classList.add('lbl-correct');
+                if (chosenVal && val === chosenVal && chosenVal !== correctAnswer && correctAnswer !== "ALL")
+                    lbl.classList.add('lbl-wrong');
+            });
+        });
+
+        // Sync mistake bank to Supabase
+        _mistakeBank = mistakeBank;
+        saveMistakeBank();
+
+        // Grade calculation
+        const percentage   = Math.round((rawScore / totalQuestions) * 100);
+        let predictedGrade = "F";
+        let gradeColor     = "#ef4444";
+        if      (percentage >= 75) { predictedGrade = "Distinction Pass (A)"; gradeColor = "#10b981"; }
+        else if (percentage >= 65) { predictedGrade = "Very Good Pass (B)";   gradeColor = "#3b82f6"; }
+        else if (percentage >= 55) { predictedGrade = "Credit Pass (C)";      gradeColor = "#6366f1"; }
+        else if (percentage >= 45) { predictedGrade = "Ordinary Pass (S)";    gradeColor = "#f59e0b"; }
+
+        // Update global stats
+        if (!isMistakeMode) {
+            _stats.attempted++;
+            _stats.totalScore += (rawScore * (50 / totalQuestions));
+            if (percentage > _stats.bestPercentage) {
+                _stats.bestPercentage = percentage;
+                _stats.bestGrade = percentage >= 75 ? 'A'
+                                 : (percentage >= 65 ? 'B'
+                                 : (percentage >= 55 ? 'C' : 'S'));
+            }
+            saveStats();
+            clearSessionProgress();
+        }
+
+        // Score banner
+        const scoreBanner = document.getElementById('scoreDisplay');
+        scoreBanner.innerHTML = `
+            ⚛️ Physics Performance Analytics<br>
+            <div class="grade-pill-badge" style="background:${gradeColor}">${predictedGrade}</div><br>
+            <span style="font-size:20px;color:var(--text-muted);">Final Result: <b>${rawScore} / ${totalQuestions} Correct</b> (${percentage}%)</span>
+            <div style="font-size:14px;margin-top:5px;color:var(--accent-color);">
+                Pace: avg ${Math.round(secondsElapsed / totalQuestions)}s per question.
+            </div>
+            <div class="radar-box">
+                <b>Subsection Diagnostics:</b><br><br>
+                <div class="radar-line"><span>Foundational (Q01–10):</span> <b>${blockAnalysis.core.c} / ${blockAnalysis.core.t}</b></div>
+                <div class="radar-line"><span>Intermediate (Q11–20):</span> <b>${blockAnalysis.secondary.c} / ${blockAnalysis.secondary.t}</b></div>
+                <div class="radar-line"><span>Advanced (Q21–50):</span>     <b>${blockAnalysis.advanced.c} / ${blockAnalysis.advanced.t}</b></div>
+            </div>
+            <div style="margin-top:20px;">
+                <button class="btn-back" onclick="showSubjectScreen()" style="margin-right:12px;">← Back to Physics Portal</button>
+                <a href="dashboard.html" class="btn-back">🏠 Dashboard</a>
+            </div>
+        `;
+        scoreBanner.style.display = 'block';
+
+        if (percentage >= 75) triggerHapticPulse([100, 50, 100, 50, 300]);
+        document.getElementById('submitBtn').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // =============================================
+    // LIGHTBOX
+    // =============================================
+    function openLightboxModal(imageSrc) {
+        const modal     = document.getElementById('global-lightbox');
+        const targetImg = document.getElementById('lightbox-image-target');
+        targetImg.src   = imageSrc;
+        modal.classList.add('active');
+        resetLightboxZoom();
+        playSynthBeep(600, 0.04);
+    }
+
+    function closeLightboxModal() {
+        document.getElementById('global-lightbox').classList.remove('active');
+        playSynthBeep(400, 0.02);
+    }
+
+    function adjustLightboxZoom(amount) {
+        currentLightboxScale = Math.max(0.5, Math.min(4.0, currentLightboxScale + amount));
+        document.getElementById('lightbox-image-target').style.transform = `scale(${currentLightboxScale})`;
+        playSynthBeep(750, 0.02);
+    }
+
+    function resetLightboxZoom() {
+        currentLightboxScale = 1.0;
+        document.getElementById('lightbox-image-target').style.transform = 'scale(1)';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('global-lightbox');
+        if (modal.classList.contains('active')) {
+            if (e.key === 'Escape')              closeLightboxModal();
+            if (e.key === '=' || e.key === '+')  adjustLightboxZoom(0.2);
+            if (e.key === '-')                   adjustLightboxZoom(-0.2);
+        }
+    });
+
+    // =============================================
+    // UTILITIES
+    // =============================================
+    function toggleCosmicLightScheme() {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('lightModeConfig', document.body.classList.contains('light-mode'));
+        playSynthBeep(440, 0.05);
+    }
+
+    function playSynthBeep(freq, duration) {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc      = audioCtx.createOscillator();
+            const gain     = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            osc.type            = 'sine';
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {}
+    }
+
+    function triggerHapticPulse(pattern) {
+        if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+</script>
+
+<!-- Shared global helpers from app.js (optional — loaded last, does not block page boot) -->
+<script src="app.js" defer></script>
+</body>
+</html>
