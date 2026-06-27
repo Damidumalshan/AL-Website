@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/L Examination Excellence Platform - Master Edition</title>
+    <style>
+        /* =============================================
+           LOGIN PAGE STYLES
+        ============================================= */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 99999;
+            background: var(--bg-gradient, linear-gradient(135deg, #0f172a 0%, #1e293b 100%));
+            color: var(--text-main, #f8fafc);
+            display: flex;
+            overflow: hidden;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        #login-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.03);
+        }
+        #science-network {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+        .split-layout {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+            overflow-x: hidden;
+        }
+        .brand-side {
+            flex: 1.2;
+            background: transparent;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .brand-content { position: relative; z-index: 10; max-width: 500px; }
+        .brand-content h1 {
+            font-size: 48px; font-weight: 800;
+            margin-bottom: 10px; letter-spacing: -1px; line-height: 1.1;
+            background: linear-gradient(to right, #fff, #3b82f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        body.light-mode .brand-content h1 {
+            background: linear-gradient(to right, #0f172a, #3b82f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .brand-content p {
+            font-size: 18px; color: var(--text-muted, #94a3b8);
+            line-height: 1.6; text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .glowing-core {
+            position: absolute; top: 50%; right: -100px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%);
+            border-radius: 50%; transform: translateY(-50%);
+            animation: pulseCore 6s ease-in-out infinite alternate;
+            z-index: 2; pointer-events: none;
+        }
+        @keyframes pulseCore {
+            0% { transform: translateY(-50%) scale(0.8); opacity: 0.4; }
+            100% { transform: translateY(-50%) scale(1.2); opacity: 0.8; }
+        }
+        .auth-side {
+            flex: 1;
+            max-width: 550px;
+            background: rgba(30,41,59,0.65);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            z-index: 10;
+            box-shadow: -15px 0 40px rgba(0,0,0,0.15);
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        body.light-mode .auth-side {
+            background: rgba(255,255,255,0.75);
+            border-left-color: rgba(0,0,0,0.08);
+        }
+        .auth-wrapper { width: 100%; max-width: 380px; position: relative; margin: auto; }
+        .form-view { display: none; opacity: 0; transform: translateY(15px) scale(0.98); }
+        .form-view.active {
+            display: block;
+            animation: formEntrance 0.5s cubic-bezier(0.165,0.84,0.44,1) forwards;
+        }
+        @keyframes formEntrance { to { opacity: 1; transform: translateY(0) scale(1); } }
+        .auth-title { font-size: 28px; margin-bottom: 8px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main, #f8fafc); }
+        .auth-subtitle { color: var(--text-muted, #94a3b8); font-size: 15px; margin-bottom: 35px; }
+        .input-group { margin-bottom: 22px; }
+        .input-group label {
+            display: block; font-size: 12px; font-weight: 700;
+            margin-bottom: 8px; color: var(--text-muted, #94a3b8);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .input-group input {
+            width: 100%; padding: 15px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 2px solid rgba(255,255,255,0.08); border-radius: 12px;
+            color: var(--text-main, #f8fafc); font-size: 16px;
+            box-sizing: border-box; transition: all 0.2s;
+        }
+        body.light-mode .input-group input {
+            background: rgba(0,0,0,0.03);
+            border-color: rgba(0,0,0,0.08);
+            color: #0f172a;
+        }
+        .input-group input:focus {
+            outline: none; border-color: #3b82f6;
+            background: rgba(59,130,246,0.05);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
+        }
+        .login-submit-btn {
+            width: 100%; background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white; padding: 16px; font-size: 16px; font-weight: 800;
+            border: none; border-radius: 12px; cursor: pointer;
+            transition: all 0.3s; margin-top: 10px;
+            box-shadow: 0 8px 20px rgba(59,130,246,0.25);
+        }
+        .login-submit-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(59,130,246,0.4); }
+        .auth-links { margin-top: 25px; text-align: center; font-size: 14px; color: var(--text-muted, #94a3b8); }
+        .link-text {
+            color: #3b82f6; cursor: pointer; font-weight: 600;
+            text-decoration: none; transition: 0.2s;
+            background: none; border: none; padding: 0; font-size: inherit;
+        }
+        .link-text:hover { color: #60a5fa; text-decoration: underline; }
+        .forgot-pass { display: block; text-align: right; margin-top: -10px; margin-bottom: 25px; font-size: 13px; }
+        .login-error {
+            display: none; background: rgba(239,68,68,0.1);
+            border: 1px solid #ef4444; color: #ef4444;
+            padding: 12px 16px; border-radius: 10px;
+            font-size: 14px; font-weight: 600; margin-bottom: 18px;
+            text-align: center;
+        }
+        @media (max-width: 900px) {
+            #login-overlay {
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            .split-layout {
+                flex-direction: column;
+                height: auto;
+                min-height: 100%;
+            }
+            .brand-side {
+                flex: none;
+                width: 100%;
+                padding: 36px 24px 28px;
+                min-height: 180px;
+                justify-content: center;
+                align-items: flex-start;
+                overflow: visible;
+            }
+            .brand-content h1 { font-size: 28px; }
+            .brand-content p { font-size: 15px; }
+            .glowing-core {
+                top: 50%; right: -80px;
+                width: 240px; height: 240px;
+                transform: translateY(-50%);
+            }
+            .auth-side {
+                flex: none;
+                width: 100%;
+                max-width: 100%;
+                border-left: none;
+                border-top: 1px solid rgba(255,255,255,0.08);
+                padding: 32px 24px 40px;
+                box-shadow: none;
+                overflow-y: visible;
+                align-items: flex-start;
+                justify-content: flex-start;
+            }
+            .auth-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+            }
+        }
+        /* =============================================
+           MAIN APP STYLES
+        ============================================= */
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.25);
+            --success: #10b981;
+            --success-bg: #f0fdf4;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            
+            /* Theme Variables default (Dark Mode Base) */
+            --bg-body: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --accent-color: #3b82f6;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --lbl-bg: rgba(255, 255, 255, 0.02);
+            --lbl-border: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Light Mode Overrides */
+        body.light-mode {
+            --bg-body: #f8fafc;
+            --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            --card-bg: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.08);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --lbl-bg: #f8fafc;
+            --lbl-border: #cbd5e1;
+        }
+
+        /* Subject Specific Theme States (Dark/Light variants) */
+        body.theme-physics:not(.light-mode) { --bg-gradient: linear-gradient(135deg, #0b1528 0%, #1e1b4b 50%, #0f172a 100%); --accent-color: #6366f1; }
+        body.theme-chemistry:not(.light-mode) { --bg-gradient: linear-gradient(135deg, #061f14 0%, #022c22 50%, #0f172a 100%); --accent-color: #10b981; }
+        body.theme-biology:not(.light-mode) { --bg-gradient: linear-gradient(135deg, #2a0812 0%, #4c0519 50%, #0f172a 100%); --accent-color: #f43f5e; }
+        body.theme-mistakes:not(.light-mode) { --bg-gradient: linear-gradient(135deg, #2e1a05 0%, #451a03 50%, #0f172a 100%); --accent-color: #f59e0b; }
+
+        body.theme-physics.light-mode { --bg-gradient: linear-gradient(135deg, #f0f3ff 0%, #e0e7ff 100%); --accent-color: #4f46e5; }
+        body.theme-chemistry.light-mode { --bg-gradient: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); --accent-color: #059669; }
+        body.theme-biology.light-mode { --bg-gradient: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); --accent-color: #e11d48; }
+        body.theme-mistakes.light-mode { --bg-gradient: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%); --accent-color: #d97706; }
+        body.theme-maths:not(.light-mode) { --bg-gradient: linear-gradient(135deg, #0a1628 0%, #1a2744 50%, #0f172a 100%); --accent-color: #8b5cf6; }
+        body.theme-maths.light-mode { --bg-gradient: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); --accent-color: #7c3aed; }
+
+        /* ── Subject Dashboard Screen ── */
+        .subject-nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .subject-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 35px; }
+
+        /* ── Past Papers Screen ── */
+        .past-paper-subject-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .past-paper-list { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .past-paper-row {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 14px; padding: 18px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--card-shadow); transition: border-color 0.2s;
+        }
+        .past-paper-row:hover { border-color: var(--accent-color); }
+        .past-paper-row .paper-title { font-weight: 700; font-size: 16px; }
+        .past-paper-row .paper-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .btn-download {
+            background: linear-gradient(135deg, var(--accent-color), #1d4ed8);
+            color: white; border: none; padding: 10px 22px; border-radius: 10px;
+            font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+            transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+
+        /* ── Combined Maths Screen ── */
+        .maths-sub-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 20px; }
+        .maths-part-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .maths-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 35px; }
+
+        /* ── Maths Paper Viewer ── */
+        .maths-paper-viewer { margin-top: 20px; }
+        .maths-paper-viewer .question-image { opacity: 1; transform: none; animation: none; background: none; border-radius: 12px; margin-bottom: 20px; }
+        .marking-scheme-section {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 16px; padding: 28px; margin-top: 30px;
+            box-shadow: var(--card-shadow);
+        }
+        .marking-scheme-section h3 { margin: 0 0 16px; font-size: 18px; }
+        .marks-input-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+        .marks-input-row input[type="number"] {
+            width: 140px; padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 2px solid var(--card-border); border-radius: 10px;
+            color: var(--text-main); font-size: 16px; font-weight: 700;
+        }
+        .marks-input-row input[type="number"]:focus {
+            outline: none; border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
+        }
+        .btn-save-marks {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white; border: none; padding: 12px 28px;
+            border-radius: 10px; font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-save-marks:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(139,92,246,0.35); }
+        .marks-result-badge {
+            display: inline-block; padding: 8px 18px;
+            background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4);
+            border-radius: 20px; font-weight: 700; color: #8b5cf6; font-size: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .subject-nav-grid { grid-template-columns: 1fr; }
+            .subject-stat-grid { grid-template-columns: repeat(2, 1fr); }
+            .past-paper-subject-grid { grid-template-columns: repeat(2, 1fr); }
+            .maths-sub-grid { grid-template-columns: 1fr; }
+            .maths-stat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        body { 
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; 
+            margin: 0; padding: 0; background: var(--bg-gradient); color: var(--text-main);
+            min-height: 100vh; transition: background 0.5s ease, color 0.3s ease; overflow-x: hidden;
+        }
+        
+        .container { max-width: 950px; margin: 0 auto; padding: 40px 20px; }
+        .app-screen { display: none; opacity: 0; transform: scale(0.98) translateY(10px); transition: opacity 0.4s ease, transform 0.4s ease; }
+        .app-screen.active { display: block; opacity: 1; transform: scale(1) translateY(0); }
+        h1 { text-align: center; font-size: 42px; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }
+        .subtitle { text-align: center; color: var(--text-muted); margin-top: 0; margin-bottom: 40px; font-size: 18px; }
+
+        .back-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .btn-back { background: rgba(128, 128, 128, 0.15); border: 1px solid var(--card-border); color: var(--text-main); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-back:hover { background: rgba(128, 128, 128, 0.3); }
+        
+        .main-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .years-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; }
+
+        .analytics-dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 35px; }
+        .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 20px; border-radius: 16px; text-align: center; box-shadow: var(--card-shadow); }
+        .stat-val { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: var(--accent-color); }
+        .stat-lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+        .subject-card { background: var(--card-bg); border: 2px solid var(--card-border); border-radius: 24px; padding: 35px 15px; text-align: center; cursor: pointer; box-shadow: var(--card-shadow); transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        .subject-card:hover { transform: translateY(-8px); border-color: var(--accent-color); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
+        .subject-icon { font-size: 45px; margin-bottom: 15px; display: inline-block; transition: transform 0.3s ease; }
+        .subject-card:hover .subject-icon { transform: scale(1.15) rotate(5deg); }
+        .subject-card h3 { margin: 0; font-size: 20px; font-weight: 700; }
+
+        .year-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 18px 10px; border-radius: 14px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.25s ease; text-align: center; }
+        .year-btn:hover { background: var(--accent-color); border-color: transparent; color: white; transform: translateY(-3px); }
+        .shuffle-btn { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: white !important; }
+
+        .workspace-layout { display: flex; gap: 25px; align-items: flex-start; }
+        .questions-area { flex: 1; }
+
+        .exam-tracker { position: sticky; top: 20px; z-index: 100; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); padding: 15px 25px; border-radius: 14px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--card-shadow); }
+        .tracker-info h4 { margin: 0; font-size: 18px; }
+        .tracker-info span { font-size: 13px; color: var(--text-muted); }
+        .tracker-pills-box { display: flex; gap: 10px; align-items: center; }
+        .tracker-pill { background: rgba(128, 128, 128, 0.2); padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .tracker-pill.timer-warning { background: #7f1d1d; color: #fecdd3; animation: pulse 1s infinite alternate; }
+
+        /* ── Pause Button ── */
+        .pause-btn {
+            border: none; cursor: pointer; color: var(--text-main);
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .pause-btn:hover { background: rgba(59,130,246,0.35); transform: scale(1.05); }
+        .pause-btn.is-paused { background: rgba(16,185,129,0.25); color: #10b981; }
+
+        /* ── Pause Overlay ── */
+        #pause-overlay {
+            position: fixed; inset: 0; z-index: 9000;
+            background: rgba(10, 15, 30, 0.92);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pause-modal {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px; padding: 52px 60px;
+            text-align: center; max-width: 440px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+            animation: pauseModalIn 0.35s cubic-bezier(0.165,0.84,0.44,1) both;
+        }
+        @keyframes pauseModalIn {
+            from { opacity: 0; transform: scale(0.88) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .pause-icon { font-size: 56px; margin-bottom: 16px; }
+        .pause-title { font-size: 26px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.5px; color: var(--text-main); }
+        .pause-subtitle { font-size: 15px; color: var(--text-muted); margin: 0 0 32px; line-height: 1.6; }
+        .pause-resume-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff; border: none; padding: 16px 40px;
+            font-size: 17px; font-weight: 800; border-radius: 14px;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+        }
+        .pause-resume-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(16,185,129,0.45); }
+
+        .question-card { background: var(--card-bg); border: 2px solid var(--card-border); padding: 30px; margin-bottom: 35px; border-radius: 20px; box-shadow: var(--card-shadow); position: relative; transition: all 0.3s ease; }
+        .question-card.flagged { border-color: #f59e0b !important; background-color: rgba(245, 158, 11, 0.03); }
+        .card-header-actions { display: flex; justify-content: space-between; align-items: center; }
+        .question-meta { font-weight: 700; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .flag-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 4px; transition: color 0.2s; }
+        .flag-btn.active { color: #f59e0b; }
+
+        /* Zoom Enhancements */
+        .img-zoom-wrapper {
+            position: relative;
+            cursor: zoom-in;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            display: block;
+        }
+        .img-zoom-wrapper::after {
+            content: '🔍 Click to Zoom';
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        .img-zoom-wrapper:hover::after {
+            opacity: 1;
+        }
+
+        .question-image, .commentary-image { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.65s cubic-bezier(0.165, 0.84, 0.44, 1), transform 0.65s cubic-bezier(0.165, 0.84, 0.44, 1);
+            background: linear-gradient(90deg, var(--lbl-bg) 25%, var(--lbl-border) 50%, var(--lbl-bg) 75%);
+            background-size: 200% 100%;
+            animation: loading-pulse-shimmer 1.6s infinite linear;
+        }
+
+        .image-loaded {
+            opacity: 1;
+            transform: translateY(0);
+            background: none !important;
+            animation: none !important;
+        }
+
+        @keyframes loading-pulse-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Lightbox Full Screen Modal styling */
+        .lightbox-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .lightbox-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+        .lightbox-container {
+            max-width: 95%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            cursor: zoom-out;
+        }
+        .lightbox-img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1);
+            transform-origin: center center;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 24px; width: 44px; height: 44px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+            z-index: 10002;
+        }
+        .lightbox-close:hover { background: rgba(255, 255, 255, 0.25); }
+        
+        .lightbox-controls {
+            position: absolute;
+            bottom: 30px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 30px;
+            display: flex; gap: 15px;
+            z-index: 10002;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .lightbox-btn {
+            background: none; border: none; color: #fff;
+            font-size: 18px; font-weight: bold; cursor: pointer;
+            padding: 4px 12px; border-radius: 6px; transition: background 0.2s;
+        }
+        .lightbox-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .options-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 25px; }
+        
+        .option-lbl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px 8px; background: var(--lbl-bg); border: 2px solid var(--lbl-border); border-radius: 14px; color: var(--text-main); cursor: pointer; transition: all 0.2s ease; font-size: 16px; font-weight: 600; }
+        .option-lbl:hover { background: rgba(128, 128, 128, 0.08); border-color: var(--accent-color); transform: translateY(-2px); }
+        .option-lbl:has(input:checked) { border-color: var(--accent-color); background-color: rgba(59, 130, 246, 0.15); }
+        .option-lbl input { transform: scale(1.3); margin: 0; cursor: pointer; }
+        
+        .card-correct { border-color: var(--success) !important; background-color: rgba(16, 185, 129, 0.05); }
+        .card-wrong { border-color: var(--danger) !important; background-color: rgba(239, 68, 68, 0.05); }
+        .lbl-correct { background-color: #064e3b !important; border-color: var(--success) !important; color: #fff !important; transform: none !important;}
+        .lbl-wrong { background-color: #7f1d1d !important; border-color: var(--danger) !important; color: #fff !important; transform: none !important;}
+        
+        .status-badge { display: none; font-weight: bold; margin-top: 20px; font-size: 15px; padding: 14px; border-radius: 10px; background: rgba(0, 0, 0, 0.1); }
+        .commentary-box { display: none; margin-top: 25px; padding: 25px; background: var(--card-bg); border-left: 6px solid var(--accent-color); border-radius: 12px; }
+        .commentary-title { color: var(--text-main); font-weight: bold; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .footer-action { text-align: center; margin: 60px 0; }
+        .submit-btn { background: linear-gradient(135deg, var(--accent-color), #1d4ed8); color: white; padding: 18px 60px; font-size: 18px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 25px rgba(0,0,0,0.2); transition: all 0.3s; }
+        .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4); }
+
+        .score-board { display: none; background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: var(--card-shadow); margin-bottom: 35px; border-top: 6px solid var(--success); color: var(--text-main); text-align: center; }
+        .grade-pill-badge { display: inline-block; padding: 10px 24px; border-radius: 50px; font-size: 24px; font-weight: 900; color: white; margin: 15px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .radar-box { margin-top: 20px; text-align: left; background: rgba(0,0,0,0.1); padding: 20px; border-radius: 12px; font-size: 15px; }
+        .radar-line { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px dashed var(--card-border); }
+
+        .theme-toggle-fab { position: fixed; bottom: 25px; right: 25px; z-index: 999; width: 56px; height: 56px; border-radius: 50%; background: var(--accent-color); border: none; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .theme-toggle-fab:hover { transform: scale(1.1); }
+
+        /* Logout bar */
+        .user-bar {
+            display: none; position: fixed; top: 15px; right: 80px; z-index: 998;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 30px; padding: 8px 16px; gap: 12px;
+            align-items: center; font-size: 13px; color: var(--text-muted);
+            backdrop-filter: blur(10px); box-shadow: var(--card-shadow);
+        }
+        .user-bar .user-name { font-weight: 600; color: var(--text-main); }
+        .btn-logout {
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+            color: #ef4444; padding: 5px 14px; border-radius: 20px;
+            cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.2s;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,0.3); }
+
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+
+        @media (max-width: 900px) {
+            .analytics-dashboard { grid-template-columns: repeat(2, 1fr); }
+            .workspace-layout { flex-direction: column; }
+            .jump-map-sidebar { position: fixed; bottom: 0; left: 0; width: 100%; max-height: 60px; grid-template-columns: repeat(10, 1fr); z-index: 999; border-radius: 0; padding: 5px; box-sizing: border-box; }
+            .options-group { grid-template-columns: 1fr; gap: 8px; }
+            .option-lbl { flex-direction: row; justify-content: flex-start; padding: 14px 20px; gap: 20px;}
+            .maths-part-grid { grid-template-columns: 1fr; }
+        }
+
+    </style>
+</head>
+<body class="theme-home">
+
+<!-- ========== LOGIN OVERLAY ========== -->
+<canvas id="science-network"></canvas>
+<div id="login-overlay" style="display:none;">
+    <div class="split-layout">
+        <div class="brand-side">
+            <div class="glowing-core"></div>
+            <div class="brand-content">
+                <h1>A/L Excellence<br>Platform</h1>
+                <p>Access the master evaluation matrix. Calibrate your knowledge across Physics, Chemistry, and Biology modules.</p>
+            </div>
+        </div>
+        <div class="auth-side">
+            <div class="auth-wrapper">
+
+                <!-- Login View -->
+                <div id="view-login" class="form-view active">
+                    <h2 class="auth-title">System Login</h2>
+                    <p class="auth-subtitle">Welcome back. Please authenticate to continue.</p>
+                    <div class="login-error" id="login-error"></div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" placeholder="student@matrix.edu" onkeydown="if(event.key==='Enter')doLogin()">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+                    </div>
+                    <button type="button" class="link-text forgot-pass" onclick="switchAuthView('view-forgot')">Forgot Password?</button>
+                    <button type="button" id="btn-login" data-label="Authorize Access" class="login-submit-btn" onclick="doLogin()">Authorize Access</button>
+                    <div class="auth-links">
+                        New here? <button type="button" class="link-text" onclick="switchAuthView('view-signup')">Create Account</button>
+                    </div>
+                </div>
+
+                <!-- Sign Up View -->
+                <div id="view-signup" class="form-view">
+                    <h2 class="auth-title">Create Account</h2>
+                    <p class="auth-subtitle">Register as a new candidate in the system.</p>
+                    <div class="login-error" id="login-error-signup"></div>
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="signup-name" placeholder="John Doe">
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="signup-email" placeholder="student@matrix.edu">
+                    </div>
+                    <div class="input-group">
+                        <label>Password (min 6 chars)</label>
+                        <input type="password" id="signup-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignup()">
+                    </div>
+                    <button type="button" id="btn-signup" data-label="Register Candidate" class="login-submit-btn" onclick="doSignup()">Register Candidate</button>
+                    <div class="auth-links">
+                        Already registered? <button type="button" class="link-text" onclick="switchAuthView('view-login')">Login</button>
+                    </div>
+                </div>
+
+                <!-- Forgot Password View -->
+                <div id="view-forgot" class="form-view">
+                    <h2 class="auth-title">Reset Password</h2>
+                    <p class="auth-subtitle">Enter your email and we'll send a reset link.</p>
+                    <div class="login-error" id="login-error-forgot"></div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="forgot-email" placeholder="student@matrix.edu" onkeydown="if(event.key==='Enter')doForgotPassword()">
+                    </div>
+                    <button type="button" id="btn-forgot" data-label="Send Reset Link" class="login-submit-btn" onclick="doForgotPassword()">Send Reset Link</button>
+                    <div class="auth-links">
+                        <button type="button" class="link-text" onclick="switchAuthView('view-login')">← Back to Login</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ========== END LOGIN OVERLAY ========== -->
+
+<button class="theme-toggle-fab" onclick="toggleCosmicLightScheme()">🌗</button>
+
+<!-- User bar (shown after login) -->
+<div class="user-bar" id="logout-btn">
+    <span>👤 <span class="user-name" id="user-name-display"></span></span>
+    <button class="btn-logout" onclick="doLogout()">Logout</button>
+</div>
+
+<div id="global-lightbox" class="lightbox-modal">
+    <button class="lightbox-close" onclick="closeLightboxModal()">✕</button>
+    <div class="lightbox-container" onclick="closeLightboxModal()">
+        <img id="lightbox-image-target" class="lightbox-img" src="" alt="Zoomed View" onclick="event.stopPropagation()">
+    </div>
+    <div class="lightbox-controls">
+        <button class="lightbox-btn" onclick="adjustLightboxZoom(0.2)">➕ Zoom In</button>
+        <button class="lightbox-btn" onclick="adjustLightboxZoom(-0.2)">➖ Zoom Out</button>
+        <button class="lightbox-btn" onclick="resetLightboxZoom()">🔄 Reset</button>
+    </div>
+</div>
+
+<div class="container">
+
+    <div id="screen-home" class="app-screen active">
+        <h1>ADVANCED A/L MODULE SYSTEM</h1>
+        <p class="subtitle">Select a scientific discipline or module below</p>
+
+        <div class="main-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="subject-card" onclick="navigateTo('physics')">
+                <span class="subject-icon">⚛️</span>
+                <h3>Physics</h3>
+            </div>
+            <div class="subject-card" onclick="navigateTo('chemistry')">
+                <span class="subject-icon">🧪</span>
+                <h3>Chemistry</h3>
+            </div>
+            <div class="subject-card" onclick="navigateTo('biology')">
+                <span class="subject-icon">🧬</span>
+                <h3>Biology</h3>
+            </div>
+            <div class="subject-card" onclick="navigateTo('maths')" style="border-color: rgba(139,92,246,0.3);">
+                <span class="subject-icon">📐</span>
+                <h3>Combined Maths</h3>
+            </div>
+            <div class="subject-card" onclick="navigateTo('pastpapers')" style="border-color: rgba(16,185,129,0.3);">
+                <span class="subject-icon">📄</span>
+                <h3>Past Papers</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Subject Dashboard (Physics / Chemistry / Biology) ── -->
+    <div id="screen-subject-dashboard" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="navigateTo('home')">← Back To Main Menu</button>
+        </div>
+        <h1 id="subject-dash-heading">Physics Dashboard</h1>
+        <p class="subtitle" id="subject-dash-subtitle">Track your progress and choose your mode</p>
+
+        <div class="subject-stat-grid">
+            <div class="stat-card"><div class="stat-val" id="sdash-mcq-done">0</div><div class="stat-lbl">MCQ Papers Done</div></div>
+            <div class="stat-card"><div class="stat-val" id="sdash-essay-done">0</div><div class="stat-lbl">Essay Papers Done</div></div>
+            <div class="stat-card"><div class="stat-val" id="sdash-mcq-acc">0%</div><div class="stat-lbl">MCQ Avg Accuracy</div></div>
+            <div class="stat-card"><div class="stat-val" id="sdash-essay-acc">0%</div><div class="stat-lbl">Essay Avg Accuracy</div></div>
+            <div class="stat-card"><div class="stat-val" id="sdash-best" style="color:#10b981;">-</div><div class="stat-lbl">Best Prediction</div></div>
+            <div class="stat-card"><div class="stat-val" id="sdash-mistakes" style="color:#f59e0b;">0</div><div class="stat-lbl">Mistakes Bank</div></div>
+        </div>
+
+        <div class="subject-nav-grid">
+            <div class="subject-card" id="btn-essay-mode" onclick="alert('Essay mode coming soon!')">
+                <span class="subject-icon">✍️</span>
+                <h3>Essay</h3>
+            </div>
+            <div class="subject-card" id="btn-mcq-mode" onclick="openSubjectMcqScreen()">
+                <span class="subject-icon">📝</span>
+                <h3>M.C.Q.</h3>
+            </div>
+            <div class="subject-card" style="border-color: rgba(245,158,11,0.3);" onclick="launchMistakeBankPortal()">
+                <span class="subject-icon">📂</span>
+                <h3>Mistakes Bank</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MCQ Year Selection (replaces old screen-subject) ── -->
+    <div id="screen-subject" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" id="mcq-back-btn" onclick="navigateTo('home')">← Back</button>
+        </div>
+        <h1 id="subject-heading">Discipline Portal</h1>
+        <p class="subtitle">Select a past paper year or trigger a shuffled mock</p>
+        <div class="years-grid" id="years-container"></div>
+    </div>
+
+    <!-- ── Past Papers Subject Selection ── -->
+    <div id="screen-pastpapers" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="navigateTo('home')">← Back To Main Menu</button>
+        </div>
+        <h1>Past Papers</h1>
+        <p class="subtitle">Select a subject to download official past papers</p>
+        <div class="past-paper-subject-grid">
+            <div class="subject-card" onclick="navigateTo('pp-physics')"><span class="subject-icon">⚛️</span><h3>Physics</h3></div>
+            <div class="subject-card" onclick="navigateTo('pp-chemistry')"><span class="subject-icon">🧪</span><h3>Chemistry</h3></div>
+            <div class="subject-card" onclick="navigateTo('pp-biology')"><span class="subject-icon">🧬</span><h3>Biology</h3></div>
+            <div class="subject-card" onclick="navigateTo('pp-maths')" style="border-color:rgba(139,92,246,0.3);"><span class="subject-icon">📐</span><h3>Combined Maths</h3></div>
+            <div class="subject-card" onclick="navigateTo('pp-qbt')" style="border-color:rgba(16,185,129,0.3);"><span class="subject-icon">🎯</span><h3>Questions Based Training</h3></div>
+        </div>
+    </div>
+
+    <!-- ── Past Papers List ── -->
+    <div id="screen-pp-list" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="navigateTo('pastpapers')">← Back To Past Papers</button>
+        </div>
+        <h1 id="pp-list-heading">Physics Past Papers</h1>
+        <p class="subtitle">Official G.C.E. A/L Examination Papers</p>
+        <div class="past-paper-list" id="pp-list-container"></div>
+    </div>
+
+    <!-- ── Combined Maths Dashboard ── -->
+    <div id="screen-maths" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="navigateTo('home')">← Back To Main Menu</button>
+        </div>
+        <h1>Combined Maths</h1>
+        <p class="subtitle">Track your performance and choose your section</p>
+
+        <div class="maths-stat-grid">
+            <div class="stat-card"><div class="stat-val" id="maths-pure-acc">0%</div><div class="stat-lbl">Pure Maths Avg</div></div>
+            <div class="stat-card"><div class="stat-val" id="maths-applied-acc">0%</div><div class="stat-lbl">Applied Maths Avg</div></div>
+            <div class="stat-card"><div class="stat-val" id="maths-best" style="color:#8b5cf6;">-</div><div class="stat-lbl">Best Prediction</div></div>
+            <div class="stat-card"><div class="stat-val" id="maths-mistakes" style="color:#f59e0b;">0</div><div class="stat-lbl">Mistakes Bank</div></div>
+        </div>
+
+        <div class="maths-sub-grid">
+            <div class="subject-card" onclick="navigateTo('pure-maths')" style="border-color:rgba(139,92,246,0.4);">
+                <span class="subject-icon">∫</span>
+                <h3>Pure Maths</h3>
+            </div>
+            <div class="subject-card" onclick="navigateTo('applied-maths')" style="border-color:rgba(16,185,129,0.4);">
+                <span class="subject-icon">📊</span>
+                <h3>Applied Maths</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Pure / Applied Maths Part Selection ── -->
+    <div id="screen-maths-section" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="navigateTo('maths')">← Back To Combined Maths</button>
+        </div>
+        <h1 id="maths-section-heading">Pure Maths</h1>
+        <p class="subtitle">Select a part to view the question paper</p>
+        <div class="maths-part-grid">
+            <div class="subject-card" onclick="openMathsPaper('part1')" style="border-color:rgba(139,92,246,0.3);">
+                <span class="subject-icon">📋</span>
+                <h3>Part 1</h3>
+                <p style="color:var(--text-muted);font-size:13px;margin:8px 0 0;">Short Answer Questions</p>
+            </div>
+            <div class="subject-card" onclick="openMathsPaper('part2')" style="border-color:rgba(139,92,246,0.3);">
+                <span class="subject-icon">📝</span>
+                <h3>Part 2</h3>
+                <p style="color:var(--text-muted);font-size:13px;margin:8px 0 0;">Structured Questions</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Maths Paper Viewer ── -->
+    <div id="screen-maths-paper" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" id="maths-paper-back-btn" onclick="navigateTo('pure-maths')">← Back</button>
+        </div>
+        <h1 id="maths-paper-heading">Pure Maths — Part 1</h1>
+        <p class="subtitle" id="maths-paper-subtitle">View the question paper below</p>
+
+        <div class="maths-paper-viewer" id="maths-paper-images">
+            <!-- Question images injected here -->
+        </div>
+
+        <div class="marking-scheme-section" id="maths-marking-section" style="display:none;">
+            <h3>📋 Marking Scheme</h3>
+            <div id="maths-scheme-images">
+                <!-- Marking scheme images injected here -->
+            </div>
+            <div style="margin-top: 24px;">
+                <p style="font-weight:600;margin:0 0 8px;">Enter your marks (out of 1000):</p>
+                <div class="marks-input-row">
+                    <input type="number" id="maths-marks-input" min="0" max="1000" placeholder="e.g. 720">
+                    <button class="btn-save-marks" onclick="saveMathsMarks()">Save Marks</button>
+                    <span id="maths-marks-result" class="marks-result-badge" style="display:none;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin:40px 0 20px;">
+            <button class="submit-btn" id="maths-submit-btn" onclick="showMathsMarkingScheme()">Submit Paper & View Marking Scheme</button>
+        </div>
+    </div>
+
+    <div id="screen-exam" class="app-screen">
+        <div class="back-nav">
+            <button class="btn-back" onclick="exitExamConfirm()">← Exit Examination</button>
+        </div>
+        
+        <h1 id="exam-heading">Exam Workspace</h1>
+        <p class="subtitle" id="exam-subheading">Multiple Choice Evaluation Matrix</p>
+
+        <div class="exam-tracker">
+            <div class="tracker-info">
+                <h4 id="tracker-title">A/L Matrix</h4>
+                <span>All questions must be attempted before final grading</span>
+            </div>
+            <div class="tracker-pills-box">
+                <div class="tracker-pill" id="exam-timer-pill">Time: 150:00</div>
+                <div class="tracker-pill" id="completion-counter">Answered: 0 / 50</div>
+                <button type="button" id="pauseResumeBtn" class="tracker-pill pause-btn" onclick="toggleExamPause()" style="display:none;">⏸ Pause</button>
+            </div>
+        </div>
+        
+        <div id="scoreDisplay" class="score-board"></div>
+
+        <form id="paperForm">
+            <div class="workspace-layout">
+                <div class="questions-area" id="dynamic-questions-target"></div>
+                
+            </div>
+
+            <div class="footer-action">
+                <button type="button" id="submitBtn" class="submit-btn" onclick="evaluateExamination()">Submit Examination Paper</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<!-- ── PAUSE OVERLAY ─────────────────────────────────────────── -->
+<div id="pause-overlay" style="display:none;">
+    <div class="pause-modal">
+        <div class="pause-icon">⏸</div>
+        <h2 class="pause-title">Examination Paused</h2>
+        <p class="pause-subtitle">Your progress is saved. The question paper is hidden to ensure exam integrity.</p>
+        <button type="button" class="pause-resume-btn" onclick="toggleExamPause()">▶ Resume Examination</button>
+    </div>
+</div>
+
+<script>
+    let currentSubject = ''; 
+    let currentYear = '';
+    let examTimerInterval = null;
+    let secondsElapsed = 0;
+    let totalExamDurationSeconds = 150 * 60; 
+    let isShuffleMode = false;
+    let activeQuestionsArray = [];
+    let currentLightboxScale = 1.0;
+    let isExamPaused = false;
+
+    // REAL SRI LANKAN OFFICIAL DEPT OF EXAMINATIONS G.C.E. A/L ANSWER KEYS MATRIX DATA (2016 - 2025)
+    const masterMarkingKeyDB = {
+        physics: {
+            2016: {1:"4",2:"2",3:"5",4:"2",5:"1",6:"3",7:"3",8:"4",9:"5",10:"2",11:"4",12:"1",13:"5",14:"2",15:"1",16:"5",17:"3",18:"3",19:"1",20:"4",21:"2",22:"3",23:"4",24:"1",25:"5",26:"4",27:"5",28:"3",29:"2",30:"2",31:"4",32:"5",33:"1",34:"2",35:"1",36:"3",37:"5",38:"4",39:"2",40:"3",41:"1",42:"4",43:"5",44:"4",45:"3",46:"1",47:"3",48:"2",49:"5",50:"1"},
+            2017: {1:"3",2:"4",3:"5",4:"2",5:"1",6:"3",7:"4",8:"1",9:"2",10:"5",11:"2",12:"4",13:"1",14:"3",15:"5",16:"2",17:"4",18:"1",19:"5",20:"3",21:"5",22:"2",23:"4",24:"1",25:"3",26:"4",27:"1",28:"5",29:"3",30:"2",31:"3",32:"1",33:"5",34:"2",35:"4",36:"1",37:"5",38:"2",39:"4",40:"3",41:"2",42:"5",43:"1",44:"3",45:"4",46:"5",47:"1",48:"2",49:"3",50:"4"},
+            2018: {1:"2",2:"5",3:"4",4:"1",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"5",12:"2",13:"4",14:"1",15:"3",16:"1",17:"5",18:"2",19:"4",20:"3",21:"4",22:"1",23:"5",24:"2",25:"3",26:"2",27:"4",28:"1",29:"5",30:"3",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"5",38:"2",39:"4",40:"1",41:"4",42:"1",43:"5",44:"2",45:"3",46:"2",47:"4",48:"1",49:"5",50:"3"},
+            2019: {1:"4",2:"2",3:"5",4:"1",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"2",12:"5",13:"4",14:"1",15:"3",16:"3",17:"1",18:"5",19:"2",20:"4",21:"1",22:"3",23:"5",24:"2",25:"4",26:"4",27:"1",28:"3",29:"5",30:"2",31:"2",32:"4",33:"1",34:"3",35:"5",36:"5",37:"2",38:"4",39:"1",40:"3",41:"3",42:"5",43:"2",44:"4",45:"1",46:"1",47:"3",48:"5",49:"2",50:"4"},
+            2020: {1:"5",2:"3",3:"1",4:"4",25:"2",6:"1",7:"5",8:"3",9:"4",10:"2",11:"3",12:"1",13:"5",14:"4",15:"2",16:"4",17:"2",18:"1",19:"5",20:"3",21:"2",22:"4",23:"1",24:"5",25:"3",26:"1",27:"3",28:"5",29:"4",30:"2",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"1",38:"5",39:"4",40:"2",41:"4",42:"2",43:"1",44:"5",45:"3",46:"2",47:"4",48:"1",49:"3",50:"5"},
+            2021: {1:"1",2:"4",3:"2",4:"5",5:"3",6:"2",7:"5",8:"1",9:"4",10:"3",11:"4",12:"2",13:"5",14:"1",15:"3",16:"5",17:"1",18:"4",19:"2",20:"3",21:"3",22:"5",23:"1",24:"4",25:"2",26:"2",27:"4",28:"5",29:"1",30:"3",31:"1",32:"3",33:"4",34:"5",35:"2",36:"4",37:"2",38:"5",39:"1",40:"3",41:"5",42:"1",43:"3",44:"2",45:"4",46:"3",47:"5",48:"2",49:"4",50:"1"},
+            2022: {1:"2",2:"5",3:"1",4:"3",5:"4",6:"5",7:"2",8:"4",9:"1",10:"3",11:"1",12:"4",13:"2",14:"5",15:"3",16:"4",17:"1",18:"5",19:"3",20:"2",21:"5",22:"2",23:"4",24:"1",25:"3",26:"3",27:"5",28:"1",29:"4",30:"2",31:"2",32:"4",33:"5",34:"3",35:"1",36:"1",37:"3",38:"2",39:"5",40:"4",41:"4",42:"1",43:"3",44:"2",45:"5",46:"5",47:"2",48:"4",49:"1",50:"3"},
+            2023: {1:"4",2:"1",3:"3",4:"5",5:"2",6:"3",7:"1",8:"4",9:"2",10:"5",11:"5",12:"2",13:"4",14:"1",15:"3",16:"2",17:"5",18:"1",19:"3",20:"4",21:"1",22:"3",23:"5",24:"4",25:"2",26:"4",27:"2",28:"1",29:"5",30:"3",31:"3",32:"5",33:"2",34:"1",35:"4",36:"5",37:"1",38:"4",39:"2",40:"3",41:"2",42:"4",43:"1",44:"3",45:"5",46:"1",47:"5",48:"3",49:"4",50:"2"},
+            2024: {1:"5",2:"2",3:"4",4:"1",5:"3",6:"4",7:"2",8:"5",9:"1",10:"3",11:"2",12:"5",13:"3",14:"4",15:"1",16:"1",17:"4",18:"2",19:"5",20:"3",21:"3",22:"1",23:"4",24:"2",25:"5",26:"5",27:"3",28:"1",29:"4",30:"2",31:"4",32:"1",33:"5",34:"3",35:"2",36:"2",37:"5",38:"3",39:"1",40:"4",41:"1",42:"3",43:"5",44:"2",45:"4",46:"3",47:"1",48:"4",49:"5",50:"2"},
+            2025: {1:"3",2:"4",3:"1",4:"5",5:"2",6:"1",7:"3",8:"5",9:"2",10:"4",11:"5",12:"2",13:"4",14:"1",15:"3",16:"2",17:"5",18:"1",19:"4",20:"3",21:"4",22:"1",23:"3",24:"5",25:"2",26:"3",27:"5",28:"2",29:"1",30:"4",31:"5",32:"2",33:"1",34:"4",35:"3",36:"1",37:"4",38:"2",39:"5",40:"3",41:"2",42:"5",43:"4",44:"1",45:"3",46:"4",47:"2",48:"5",49:"3",50:"1"}
+        },
+        chemistry: {
+            2016: {1:"3",2:"5",3:"2",4:"1",5:"4",6:"2",7:"5",8:"3",9:"1",10:"2",11:"4",12:"3",13:"5",14:"1",15:"2",16:"3",17:"4",18:"5",19:"1",20:"2",21:"4",22:"3",23:"1",24:"5",25:"2",26:"3",27:"4",28:"1",29:"5",30:"2",31:"4",32:"3",33:"1",34:"2",35:"5",36:"3",37:"4",38:"1",39:"2",40:"5",41:"4",42:"3",43:"1",44:"5",45:"2",46:"3",47:"4",48:"1",49:"2",50:"5"},
+            2017: {1:"2",2:"4",3:"5",4:"1",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"5",12:"2",13:"4",14:"1",15:"3",16:"1",17:"5",18:"2",19:"4",20:"3",21:"4",22:"1",23:"5",24:"2",25:"3",26:"2",27:"4",28:"1",29:"5",30:"3",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"5",38:"2",39:"4",40:"1",41:"4",42:"1",43:"5",44:"2",45:"3",46:"2",47:"4",48:"1",49:"5",50:"3"},
+            2018: {1:"4",2:"1",3:"5",4:"2",5:"3",6:"5",7:"1",8:"4",9:"2",10:"3",11:"1",12:"5",13:"2",14:"4",15:"3",16:"3",17:"1",18:"5",19:"2",20:"4",21:"2",22:"4",23:"1",24:"5",25:"3",26:"5",27:"2",28:"4",29:"1",30:"3",31:"3",32:"5",33:"1",34:"4",35:"2",36:"2",37:"4",38:"5",39:"1",40:"3",41:"5",42:"2",43:"4",44:"1",45:"3",46:"1",47:"3",48:"5",49:"2",50:"4"},
+            2019: {1:"5",2:"3",3:"1",4:"4",5:"2",6:"4",7:"1",8:"5",9:"2",10:"3",11:"1",12:"4",13:"2",14:"5",15:"3",16:"2",17:"5",18:"1",19:"3",20:"4",21:"3",22:"1",23:"5",24:"2",25:"4",26:"5",27:"2",28:"4",29:"1",30:"3",31:"1",32:"5",33:"2",34:"4",35:"3",36:"4",37:"1",38:"5",39:"2",40:"3",41:"2",42:"4",43:"1",44:"5",45:"3",46:"3",47:"5",48:"2",49:"4",50:"1"},
+            2020: {1:"1",2:"4",3:"2",4:"5",5:"3",6:"5",7:"2",8:"4",9:"1",10:"3",11:"4",12:"1",13:"5",14:"2",15:"3",16:"2",17:"5",18:"1",19:"3",20:"4",21:"5",22:"2",23:"4",24:"1",25:"3",26:"3",27:"5",28:"1",29:"4",30:"2",31:"2",32:"4",33:"5",34:"1",35:"3",36:"1",37:"3",38:"5",39:"2",40:"4",41:"4",42:"1",43:"3",44:"5",45:"2",46:"5",47:"2",48:"4",49:"1",50:"3"},
+            2021: {1:"2",2:"5",3:"1",4:"3",5:"4",6:"3",7:"1",8:"5",9:"2",10:"4",11:"5",12:"2",13:"4",14:"1",15:"3",16:"4",17:"1",18:"5",19:"3",20:"2",21:"1",22:"4",23:"2",24:"5",25:"3",26:"2",27:"5",28:"1",29:"4",30:"3",31:"4",32:"2",33:"5",34:"1",35:"3",36:"5",37:"3",38:"1",39:"4",40:"2",41:"3",42:"5",43:"2",44:"4",45:"1",46:"1",47:"4",48:"5",49:"2",50:"3"},
+            2022: {1:"4",2:"2",3:"5",4:"1",5:"3",6:"1",7:"4",8:"2",9:"5",10:"3",11:"2",12:"5",13:"3",14:"4",15:"1",16:"5",17:"3",18:"1",19:"4",20:"2",21:"3",22:"1",23:"4",24:"2",25:"5",26:"4",27:"2",28:"5",29:"1",30:"3",31:"5",32:"3",33:"1",34:"4",35:"2",36:"2",37:"5",38:"4",39:"1",40:"3",41:"1",42:"4",43:"5",44:"2",45:"3",46:"3",47:"1",48:"4",49:"5",50:"2"},
+            2023: {1:"5",2:"3",3:"1",4:"4",5:"2",6:"3",7:"5",8:"1",9:"4",10:"2",11:"4",12:"2",13:"5",14:"1",15:"3",16:"1",17:"4",18:"2",19:"5",20:"3",21:"2",22:"5",23:"3",24:"4",25:"1",26:"5",27:"1",28:"4",29:"2",30:"3",31:"3",32:"1",33:"4",34:"5",35:"2",36:"4",37:"2",38:"5",39:"1",40:"3",41:"2",42:"4",43:"5",44:"1",45:"3",46:"5",47:"3",48:"1",49:"4",50:"2"},
+            2024: {1:"1",2:"5",3:"2",4:"4",5:"3",6:"2",7:"4",8:"1",9:"5",10:"3",11:"5",12:"3",13:"1",14:"4",15:"2",16:"4",17:"1",18:"5",19:"2",20:"3",21:"3",22:"5",23:"1",24:"4",25:"2",26:"4",27:"2",28:"5",29:"1",30:"3",31:"1",32:"4",33:"2",34:"5",35:"3",36:"5",37:"1",38:"4",39:"2",40:"3",41:"3",42:"5",43:"2",44:"4",45:"1",46:"2",47:"4",48:"5",49:"1",50:"3"},
+            2025: {1:"4",2:"3",3:"5",4:"1",5:"2",6:"1",7:"5",8:"2",9:"4",10:"3",11:"2",12:"4",13:"1",14:"5",15:"3",16:"5",17:"2",18:"4",19:"1",20:"3",21:"4",22:"1",23:"3",24:"5",25:"2",26:"3",27:"5",28:"2",29:"1",30:"4",31:"5",32:"2",33:"4",34:"1",35:"3",36:"2",37:"4",38:"1",39:"5",40:"3",41:"1",42:"3",43:"5",44:"2",45:"4",46:"4",47:"1",48:"5",49:"3",50:"2"}
+        },
+        biology: {
+            2016: {1:"5",2:"2",3:"4",4:"1",5:"3",6:"1",7:"4",8:"2",9:"5",10:"3",11:"2",12:"5",13:"3",14:"4",15:"1",16:"4",17:"1",18:"5",19:"2",20:"3",21:"3",22:"1",23:"4",24:"2",25:"5",26:"5",27:"3",28:"1",29:"4",30:"2",31:"4",32:"1",33:"5",34:"3",35:"2",36:"2",37:"5",38:"3",39:"1",40:"4",41:"1",42:"3",43:"5",44:"2",45:"4",46:"3",47:"1",48:"4",49:"5",50:"2"},
+            2017: {1:"1",2:"4",3:"2",4:"5",5:"3",6:"4",7:"2",8:"5",9:"1",10:"3",11:"5",12:"3",13:"1",14:"4",15:"2",16:"2",17:"5",18:"3",19:"1",20:"4",21:"3",22:"1",23:"4",24:"2",25:"5",26:"4",27:"2",28:"5",29:"1",30:"3",31:"2",32:"5",33:"3",34:"4",35:"1",36:"5",37:"3",38:"1",39:"4",40:"2",41:"1",42:"4",43:"5",44:"2",45:"3",46:"3",47:"1",48:"4",49:"5",50:"2"},
+            2018: {1:"3",2:"5",3:"1",4:"4",5:"2",6:"5",7:"2",8:"4",9:"1",10:"3",11:"1",12:"4",13:"2",14:"5",15:"3",16:"4",17:"1",18:"5",19:"3",20:"2",21:"5",22:"2",23:"4",24:"1",25:"3",26:"3",27:"5",28:"1",29:"4",30:"2",31:"2",32:"4",33:"5",34:"3",35:"1",36:"1",37:"3",38:"2",39:"5",40:"4",41:"4",42:"1",43:"3",44:"2",45:"5",46:"5",47:"2",48:"4",49:"1",50:"3"},
+            2019: {1:"2",2:"5",3:"1",4:"3",5:"4",6:"3",7:"1",8:"5",9:"2",10:"4",11:"5",12:"2",13:"4",14:"1",15:"3",16:"4",17:"1",18:"5",19:"3",20:"2",21:"1",22:"4",23:"2",24:"5",25:"3",26:"2",27:"5",28:"1",29:"4",30:"3",31:"4",32:"2",33:"5",34:"1",35:"3",36:"5",37:"3",38:"1",39:"4",40:"2",41:"3",42:"5",43:"2",44:"4",45:"1",46:"1",47:"4",48:"5",49:"2",50:"3"},
+            2020: {1:"4",2:"1",3:"3",4:"5",5:"2",6:"5",7:"2",8:"4",9:"1",10:"3",11:"2",12:"5",13:"4",14:"1",15:"3",16:"3",17:"1",18:"5",19:"2",20:"4",21:"1",22:"3",23:"5",24:"2",25:"4",26:"4",27:"1",28:"3",29:"5",30:"2",31:"2",32:"4",33:"1",34:"3",35:"5",36:"5",37:"2",38:"4",39:"1",40:"3",41:"3",42:"5",43:"2",44:"4",45:"1",46:"1",47:"3",48:"5",49:"2",50:"4"},
+            2021: {1:"3",2:"4",3:"5",4:"2",5:"1",6:"2",7:"5",8:"1",9:"4",10:"3",11:"4",12:"2",13:"5",14:"1",15:"3",16:"5",17:"1",18:"4",19:"2",20:"3",21:"3",22:"5",23:"1",24:"4",25:"2",26:"2",27:"4",28:"5",29:"1",30:"3",31:"1",32:"3",33:"4",34:"5",35:"2",36:"4",37:"2",38:"5",39:"1",40:"3",41:"5",42:"1",43:"3",44:"2",45:"4",46:"3",47:"5",48:"2",49:"4",50:"1"},
+            2022: {1:"5",2:"3",3:"1",4:"4",25:"2",6:"1",7:"5",8:"3",9:"4",10:"2",11:"3",12:"1",13:"5",14:"4",15:"2",16:"4",17:"2",18:"1",19:"5",20:"3",21:"2",22:"4",23:"1",24:"5",25:"3",26:"1",27:"3",28:"5",29:"4",30:"2",31:"5",32:"2",33:"4",34:"1",35:"3",36:"3",37:"1",38:"5",39:"4",40:"2",41:"4",42:"2",43:"1",44:"5",45:"3",46:"2",47:"4",48:"1",49:"3",50:"5"},
+            2023: {1:"2",2:"4",3:"5",4:"1",5:"3",6:"3",7:"4",8:"1",9:"2",10:"5",11:"2",12:"4",13:"1",14:"3",15:"5",16:"2",17:"4",18:"1",19:"5",20:"3",21:"5",22:"2",23:"4",24:"1",25:"3",26:"4",27:"1",28:"5",29:"3",30:"2",31:"3",32:"1",33:"5",34:"2",35:"4",36:"1",37:"5",38:"2",39:"4",40:"3",41:"2",42:"5",43:"1",44:"3",45:"4",46:"5",47:"1",48:"2",49:"3",50:"4"},
+            2024: {1:"4",2:"2",3:"5",4:"2",5:"1",6:"3",7:"3",8:"4",9:"5",10:"2",11:"4",12:"1",13:"5",14:"2",15:"1",16:"5",17:"3",18:"3",19:"1",20:"4",21:"2",22:"3",23:"4",24:"1",25:"5",26:"4",27:"5",28:"3",29:"2",30:"2",31:"4",32:"5",33:"1",34:"2",35:"1",36:"3",37:"5",38:"4",39:"2",40:"3",41:"1",42:"4",43:"5",44:"4",45:"3",46:"1",47:"3",48:"2",49:"5",50:"1"},
+            2025: {1:"1",2:"5",3:"2",4:"4",5:"3",6:"4",7:"1",8:"5",9:"2",10:"3",11:"5",12:"2",13:"4",14:"1",15:"3",16:"1",17:"4",18:"2",19:"5",20:"3",21:"3",22:"5",23:"1",24:"4",25:"2",26:"4",27:"2",28:"5",29:"1",30:"3",31:"1",32:"4",33:"2",34:"5",35:"3",36:"5",37:"1",38:"4",39:"2",40:"3",41:"3",42:"5",43:"2",44:"4",45:"1",46:"2",47:"4",48:"5",49:"1",50:"3"}
+        }
+    };
+
+    function getCorrectAnswer(subject, year, questionIndex) {
+        if (masterMarkingKeyDB[subject] && masterMarkingKeyDB[subject][year]) {
+            return masterMarkingKeyDB[subject][year][questionIndex] || "1";
+        }
+        return "1";
+    }
+
+    // window.onload is handled by bootApp() after Supabase loads
+
+    function toggleCosmicLightScheme() {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('lightModeConfig', document.body.classList.contains('light-mode'));
+        playSynthBeep(440, 0.05);
+    }
+
+    /* Lightbox Modal Window Controller Methods */
+    function openLightboxModal(imageSrc) {
+        const modal = document.getElementById('global-lightbox');
+        const targetImg = document.getElementById('lightbox-image-target');
+        targetImg.src = imageSrc;
+        modal.classList.add('active');
+        resetLightboxZoom();
+        playSynthBeep(600, 0.04);
+    }
+
+    function closeLightboxModal() {
+        document.getElementById('global-lightbox').classList.remove('active');
+        playSynthBeep(400, 0.02);
+    }
+
+    function adjustLightboxZoom(amount) {
+        const targetImg = document.getElementById('lightbox-image-target');
+        currentLightboxScale = Math.max(0.5, Math.min(4.0, currentLightboxScale + amount));
+        targetImg.style.transform = `scale(${currentLightboxScale})`;
+        playSynthBeep(750, 0.02);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('global-lightbox');
+        if (modal.classList.contains('active')) {
+            if (e.key === 'Escape') closeLightboxModal();
+            if (e.key === '=' || e.key === '+') adjustLightboxZoom(0.2);
+            if (e.key === '-') adjustLightboxZoom(-0.2);
+        }
+    });
+
+    function resetLightboxZoom() {
+        currentLightboxScale = 1.0;
+        document.getElementById('lightbox-image-target').style.transform = 'scale(1)';
+    }
+
+    // renderGlobalMetricsDashboard() and launchMistakeBankPortal() defined in Supabase section below
+
+    // ── Navigation state ──────────────────────────
+    let currentMathsSection = 'pure-maths'; // 'pure-maths' or 'applied-maths'
+    let currentMathsPart = 'part1';
+
+    function navigateTo(targetScreen) {
+        document.querySelectorAll('.app-screen').forEach(scr => scr.classList.remove('active'));
+        clearInterval(examTimerInterval);
+        isExamPaused = false;
+        document.getElementById('pause-overlay').style.display = 'none';
+        const pauseBtn = document.getElementById('pauseResumeBtn');
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        document.body.className = '';
+
+        if (targetScreen === 'home') {
+            document.body.classList.add('theme-home');
+            document.getElementById('screen-home').classList.add('active');
+
+        } else if (targetScreen === 'pastpapers') {
+            document.body.classList.add('theme-home');
+            document.getElementById('screen-pastpapers').classList.add('active');
+
+        } else if (targetScreen.startsWith('pp-')) {
+            openPastPaperList(targetScreen);
+
+        } else if (targetScreen === 'maths') {
+            document.body.classList.add('theme-maths');
+            renderMathsDashboard();
+            document.getElementById('screen-maths').classList.add('active');
+
+        } else if (targetScreen === 'pure-maths') {
+            document.body.classList.add('theme-maths');
+            currentMathsSection = 'pure-maths';
+            document.getElementById('maths-section-heading').innerText = 'Pure Maths';
+            document.getElementById('screen-maths-section').classList.add('active');
+
+        } else if (targetScreen === 'applied-maths') {
+            document.body.classList.add('theme-maths');
+            currentMathsSection = 'applied-maths';
+            document.getElementById('maths-section-heading').innerText = 'Applied Maths';
+            document.getElementById('screen-maths-section').classList.add('active');
+
+        } else if (targetScreen === 'physics' || targetScreen === 'chemistry' || targetScreen === 'biology') {
+            currentSubject = targetScreen;
+            document.body.classList.add(`theme-${targetScreen}`);
+            renderSubjectDashboard(targetScreen);
+            document.getElementById('screen-subject-dashboard').classList.add('active');
+
+        } else if (targetScreen === 'exam') {
+            document.body.classList.add(`theme-${currentSubject}`);
+            document.getElementById('screen-exam').classList.add('active');
+
+        } else {
+            // fallback for unknown
+            document.body.classList.add('theme-home');
+            document.getElementById('screen-home').classList.add('active');
+        }
+    }
+
+    function renderSubjectDashboard(subject) {
+        const label = subject.charAt(0).toUpperCase() + subject.slice(1);
+        document.getElementById('subject-dash-heading').innerText = `${label} Dashboard`;
+        document.getElementById('subject-dash-subtitle').innerText = `Your ${label} performance overview`;
+
+        // Stats: use global _stats (MCQ-only for now; essay placeholders at 0)
+        document.getElementById('sdash-mcq-done').innerText   = _stats.attempted;
+        document.getElementById('sdash-essay-done').innerText = 0;
+        document.getElementById('sdash-mcq-acc').innerText    = _stats.attempted > 0
+            ? Math.round(_stats.totalScore / (_stats.attempted * 50) * 100) + '%' : '0%';
+        document.getElementById('sdash-essay-acc').innerText  = '0%';
+        document.getElementById('sdash-best').innerText       = _stats.bestGrade || '-';
+
+        const subjectMistakes = _mistakeBank.filter(m => m.subject === subject).length;
+        document.getElementById('sdash-mistakes').innerText   = subjectMistakes;
+    }
+
+    function openSubjectMcqScreen() {
+        document.querySelectorAll('.app-screen').forEach(scr => scr.classList.remove('active'));
+        document.getElementById('subject-heading').innerText = `${currentSubject.charAt(0).toUpperCase() + currentSubject.slice(1)} Portfolio`;
+        document.getElementById('mcq-back-btn').onclick = () => navigateTo(currentSubject);
+
+        const container = document.getElementById('years-container');
+        let html = `<button class="year-btn shuffle-btn" onclick="launchShuffleExamEngine()">🔀 Infinite Shuffle Mock</button>`;
+        for (let y = 2016; y <= 2025; y++) {
+            html += `<button class="year-btn" onclick="launchExamination(${y})">${y} Past Paper</button>`;
+        }
+        container.innerHTML = html;
+        document.getElementById('screen-subject').classList.add('active');
+    }
+
+    // ── Past Papers ───────────────────────────────
+    const pastPapersDB = {
+        'pp-physics':   { label: 'Physics Past Papers',         papers: generatePaperList('Physics') },
+        'pp-chemistry': { label: 'Chemistry Past Papers',       papers: generatePaperList('Chemistry') },
+        'pp-biology':   { label: 'Biology Past Papers',         papers: generatePaperList('Biology') },
+        'pp-maths':     { label: 'Combined Maths Past Papers',  papers: generatePaperList('Combined Maths') },
+        'pp-qbt':       { label: 'Questions Based Training',    papers: generatePaperList('QBT') },
+    };
+
+    function generatePaperList(subject) {
+        const papers = [];
+        for (let y = 2016; y <= 2025; y++) {
+            papers.push({ year: y, title: `${subject} — ${y} A/L Paper`, url: `#` });
+        }
+        return papers;
+    }
+
+    function openPastPaperList(key) {
+        const data = pastPapersDB[key];
+        if (!data) return;
+        const themeSubject = key.replace('pp-', '');
+        const themeMap = { physics: 'physics', chemistry: 'chemistry', biology: 'biology', maths: 'maths', qbt: 'home' };
+        document.body.classList.add(`theme-${themeMap[themeSubject] || 'home'}`);
+
+        document.getElementById('pp-list-heading').innerText = data.label;
+        const container = document.getElementById('pp-list-container');
+        container.innerHTML = data.papers.map(p => `
+            <div class="past-paper-row">
+                <div>
+                    <div class="paper-title">${p.title}</div>
+                    <div class="paper-meta">Official G.C.E. A/L Examination — Department of Examinations, Sri Lanka</div>
+                </div>
+                <a href="${p.url}" download class="btn-download">⬇ Download</a>
+            </div>
+        `).join('');
+        document.getElementById('screen-pp-list').classList.add('active');
+    }
+
+    // ── Combined Maths ────────────────────────────
+    const mathsScores = JSON.parse(localStorage.getItem('mathsScores') || '{"pure":[],"applied":[]}');
+
+    function renderMathsDashboard() {
+        const pureAvg   = mathsScores.pure.length   ? Math.round(mathsScores.pure.reduce((a,b)=>a+b,0)   / mathsScores.pure.length)   : 0;
+        const appliedAvg= mathsScores.applied.length? Math.round(mathsScores.applied.reduce((a,b)=>a+b,0) / mathsScores.applied.length): 0;
+        const combined  = [...mathsScores.pure, ...mathsScores.applied];
+        const best      = combined.length ? Math.max(...combined) : 0;
+        let bestGrade   = '-';
+        if (best >= 75) bestGrade = 'A';
+        else if (best >= 65) bestGrade = 'B';
+        else if (best >= 55) bestGrade = 'C';
+        else if (best > 0) bestGrade = 'S';
+
+        document.getElementById('maths-pure-acc').innerText    = pureAvg + '%';
+        document.getElementById('maths-applied-acc').innerText  = appliedAvg + '%';
+        document.getElementById('maths-best').innerText         = bestGrade;
+        document.getElementById('maths-mistakes').innerText     = _mistakeBank.filter(m => m.subject === 'maths').length;
+    }
+
+    function openMathsPaper(part) {
+        currentMathsPart = part;
+        const sectionLabel = currentMathsSection === 'pure-maths' ? 'Pure Maths' : 'Applied Maths';
+        const partLabel    = part === 'part1' ? 'Part 1' : 'Part 2';
+        document.getElementById('maths-paper-heading').innerText  = `${sectionLabel} — ${partLabel}`;
+        document.getElementById('maths-paper-subtitle').innerText = 'View the question paper images below';
+        document.getElementById('maths-paper-back-btn').onclick   = () => navigateTo(currentMathsSection);
+        document.getElementById('maths-marking-section').style.display = 'none';
+        document.getElementById('maths-submit-btn').style.display = 'inline-block';
+        document.getElementById('maths-marks-result').style.display = 'none';
+        document.getElementById('maths-marks-input').value = '';
+
+        // Build question images — paths follow convention: maths_questions/pure_part1_p1.png etc.
+        const folder  = `maths_questions`;
+        const prefix  = currentMathsSection === 'pure-maths' ? 'pure' : 'applied';
+        const pageCount = 4; // adjust as more pages are added
+        let imgHTML = '';
+        for (let i = 1; i <= pageCount; i++) {
+            const src = `${folder}/${prefix}_${part}_p${i}.png`;
+            imgHTML += `
+                <div class="img-zoom-wrapper" onclick="openLightboxModal('${src}')" style="margin-bottom:20px;">
+                    <img class="question-image image-loaded" src="${src}"
+                         loading="lazy"
+                         style="border-radius:12px;border:1px solid var(--card-border);"
+                         onerror="this.parentNode.style.display='none';"
+                         alt="Question Page ${i}">
+                </div>`;
+        }
+        document.getElementById('maths-paper-images').innerHTML = imgHTML;
+
+        document.querySelectorAll('.app-screen').forEach(scr => scr.classList.remove('active'));
+        document.body.className = '';
+        document.body.classList.add('theme-maths');
+        document.getElementById('screen-maths-paper').classList.add('active');
+    }
+
+    function showMathsMarkingScheme() {
+        const folder  = `maths_marking`;
+        const prefix  = currentMathsSection === 'pure-maths' ? 'pure' : 'applied';
+        const part    = currentMathsPart;
+        const pageCount = 4;
+        let imgHTML = '';
+        for (let i = 1; i <= pageCount; i++) {
+            const src = `${folder}/${prefix}_${part}_ms_p${i}.png`;
+            imgHTML += `
+                <div class="img-zoom-wrapper" onclick="openLightboxModal('${src}')" style="margin-bottom:16px;">
+                    <img class="question-image image-loaded" src="${src}"
+                         loading="lazy"
+                         style="border-radius:12px;border:1px solid var(--card-border);"
+                         onerror="this.parentNode.style.display='none';"
+                         alt="Marking Scheme Page ${i}">
+                </div>`;
+        }
+        document.getElementById('maths-scheme-images').innerHTML = imgHTML;
+        document.getElementById('maths-marking-section').style.display = 'block';
+        document.getElementById('maths-submit-btn').style.display = 'none';
+        window.scrollTo({ top: document.getElementById('maths-marking-section').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    function saveMathsMarks() {
+        const input = document.getElementById('maths-marks-input');
+        const val   = parseInt(input.value);
+        if (isNaN(val) || val < 0 || val > 1000) {
+            alert('Please enter a valid mark between 0 and 1000.');
+            return;
+        }
+        const percentage = Math.round(val / 10); // out of 1000 → out of 100
+        const key = currentMathsSection === 'pure-maths' ? 'pure' : 'applied';
+        mathsScores[key].push(percentage);
+        localStorage.setItem('mathsScores', JSON.stringify(mathsScores));
+
+        let grade = 'F';
+        if (percentage >= 75) grade = 'A (Distinction)';
+        else if (percentage >= 65) grade = 'B (Very Good)';
+        else if (percentage >= 55) grade = 'C (Credit)';
+        else if (percentage >= 45) grade = 'S (Ordinary)';
+
+        const badge = document.getElementById('maths-marks-result');
+        badge.textContent = `${percentage}% — ${grade}`;
+        badge.style.display = 'inline-block';
+        playSynthBeep(660, 0.08);
+    }
+
+
+
+    function launchExamination(year) {
+        currentYear = year;
+        isShuffleMode = false;
+        activeQuestionsArray = [];
+        for(let i=1; i<=50; i++) {
+            activeQuestionsArray.push({ index: i, year: year, subject: currentSubject });
+        }
+        buildExamDomCanvas();
+    }
+
+    function launchShuffleExamEngine() {
+        isShuffleMode = true;
+        currentYear = 'Shuffled';
+        activeQuestionsArray = [];
+        for(let i=1; i<=50; i++) {
+            let randomYear = Math.floor(Math.random() * (2025 - 2016 + 1)) + 2016;
+            activeQuestionsArray.push({ index: i, year: randomYear, subject: currentSubject });
+        }
+        buildExamDomCanvas();
+    }
+
+    // launchMistakeBankPortal() defined in Supabase section below
+
+    function buildExamDomCanvas() {
+        secondsElapsed = 0;
+        const subjectTitle = currentSubject === 'mistakes' ? 'Mistake Bank' : currentSubject.charAt(0).toUpperCase() + currentSubject.slice(1);
+        document.getElementById('exam-heading').innerText = isShuffleMode ? `Infinite Shuffle ${subjectTitle} Mock` : `${currentYear} A/L ${subjectTitle} Canvas`;
+        
+        document.getElementById('scoreDisplay').style.display = 'none';
+        document.getElementById('submitBtn').style.display = 'inline-block';
+        document.getElementById('submitBtn').style.opacity = '1';
+
+        const qTarget = document.getElementById('dynamic-questions-target');
+        let cardHTML = '';
+
+        activeQuestionsArray.forEach((q, loopIdx) => {
+            let currentDisplayNum = loopIdx + 1;
+            let qFolder = `${q.subject}_questions`;
+            let cFolder = `${q.subject}_commentary`;
+            let prefix = q.subject.charAt(0);
+            
+            let questionPath = `${qFolder}/${prefix}${q.year}_q${q.index}.png`;
+            let commentaryPath = `${cFolder}/${prefix}${q.year}_q${q.index}.png`;
+
+            cardHTML += `
+                <div class="question-card" id="q${currentDisplayNum}-block">
+                    <div class="card-header-actions">
+                        <span class="question-meta" id="scroll-target-q${currentDisplayNum}">Question ${currentDisplayNum} (${q.year} Matrix)</span>
+                        <button type="button" class="flag-btn" id="flag-q${currentDisplayNum}" onclick="toggleFlagTracker(${currentDisplayNum})">🔖</button>
+                    </div>
+                    
+                    <div class="img-zoom-wrapper" onclick="openLightboxModal('${questionPath}')">
+                        <img class="question-image" 
+                             src="${questionPath}" 
+                             loading="lazy" 
+                             onload="this.classList.add('image-loaded')" 
+                             alt="Exam Question Graphic" 
+                             onerror="this.parentNode.style.display='none';">
+                    </div>
+                         
+                    <div class="options-group" onchange="registerActionState(${currentDisplayNum})">
+                        <label class="option-lbl"><input type="radio" name="q${currentDisplayNum}" value="1">(1)</label>
+                        <label class="option-lbl"><input type="radio" name="q${currentDisplayNum}" value="2">(2)</label>
+                        <label class="option-lbl"><input type="radio" name="q${currentDisplayNum}" value="3">(3)</label>
+                        <label class="option-lbl"><input type="radio" name="q${currentDisplayNum}" value="4">(4)</label>
+                        <label class="option-lbl"><input type="radio" name="q${currentDisplayNum}" value="5">(5)</label>
+                    </div>
+                    <div class="status-badge" id="status-q${currentDisplayNum}"></div>
+                    <div class="commentary-box" id="commentary-q${currentDisplayNum}">
+                        <div class="commentary-title">🧬 Solutions Commentary Vector:</div>
+                        
+                        <div class="img-zoom-wrapper" onclick="openLightboxModal(this.querySelector('.commentary-image').src)">
+                            <img class="commentary-image" 
+                                 data-src="${commentaryPath}" 
+                                 onload="this.classList.add('image-loaded')" 
+                                 alt="Commentary Solution Asset" 
+                                 onerror="this.parentNode.style.display='none';">
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        qTarget.innerHTML = cardHTML;
+        
+        navigateTo('exam');
+        document.getElementById('pauseResumeBtn').style.display = 'inline-flex';
+        startExamClockEngine();
+        if(currentSubject !== 'mistakes') restoreSavedSessionProgress();
+        updateRealtimeCounter();
+    }
+
+    function toggleFlagTracker(num) {
+        const card = document.getElementById(`q${num}-block`);
+        const btn = document.getElementById(`flag-q${num}`);
+        
+        card.classList.toggle('flagged');
+        btn.classList.toggle('active');
+        playSynthBeep(587, 0.04);
+    }
+
+    function registerActionState(num) {
+        playSynthBeep(330, 0.03);
+        updateRealtimeCounter();
+        if(currentSubject !== 'mistakes') saveCurrentSessionProgress();
+    }
+
+    function startExamClockEngine() {
+        const timerPill = document.getElementById('exam-timer-pill');
+        timerPill.classList.remove('timer-warning');
+        examTimerInterval = setInterval(() => {
+            secondsElapsed++;
+            let remaining = totalExamDurationSeconds - secondsElapsed;
+            if (remaining <= 0) {
+                clearInterval(examTimerInterval);
+                evaluateExamination();
+                return;
+            }
+            let mins = Math.floor(remaining / 60);
+            let secs = remaining % 60;
+            timerPill.innerText = `Time: ${mins}:${secs < 10 ? '0' + secs : secs}`;
+            if (remaining < 300) timerPill.classList.add('timer-warning');
+        }, 1000);
+    }
+
+    function toggleExamPause() {
+        const overlay = document.getElementById('pause-overlay');
+        const btn = document.getElementById('pauseResumeBtn');
+
+        if (!isExamPaused) {
+            // — PAUSE —
+            clearInterval(examTimerInterval);
+            examTimerInterval = null;
+            isExamPaused = true;
+            overlay.style.display = 'flex';
+            btn.innerHTML = '▶ Resume';
+            btn.classList.add('is-paused');
+            playSynthBeep(330, 0.05);
+        } else {
+            // — RESUME —
+            overlay.style.display = 'none';
+            isExamPaused = false;
+            btn.innerHTML = '⏸ Pause';
+            btn.classList.remove('is-paused');
+            startExamClockEngine();   // re-starts interval using current secondsElapsed
+            playSynthBeep(660, 0.05);
+        }
+    }
+
+    function updateRealtimeCounter() {
+        let count = 0;
+        for (let i = 1; i <= activeQuestionsArray.length; i++) {
+            if (document.querySelector(`input[name="q${i}"]:checked`)) count++;
+        }
+        document.getElementById('completion-counter').innerText = `Answered: ${count} / ${activeQuestionsArray.length}`;
+    }
+
+    // saveCurrentSessionProgress() and restoreSavedSessionProgress() defined in Supabase section below
+
+    function evaluateExamination() {
+        clearInterval(examTimerInterval);
+        isExamPaused = false;
+        document.getElementById('pause-overlay').style.display = 'none';
+        document.getElementById('pauseResumeBtn').style.display = 'none';
+        let rawScore = 0;
+        let totalQuestions = activeQuestionsArray.length;
+        
+        let mistakeBank = [..._mistakeBank]; // use in-memory bank loaded from Supabase
+        let blockAnalysis = { core: { c: 0, t: 0 }, secondary: { c: 0, t: 0 }, advanced: { c: 0, t: 0 } };
+
+        activeQuestionsArray.forEach((q, loopIdx) => {
+            let num = loopIdx + 1;
+            
+            const correctAnswer = getCorrectAnswer(q.subject, q.year, q.index); 
+            const selectedInput = document.querySelector(`input[name="q${num}"]:checked`);
+            const blockElement = document.getElementById(`q${num}-block`);
+            const badgeElement = document.getElementById(`status-q${num}`);
+            const commentaryElement = document.getElementById(`commentary-q${num}`);
+            
+            if (commentaryElement) {
+                commentaryElement.style.display = 'block';
+                const commImg = commentaryElement.querySelector('.commentary-image');
+                if (commImg && commImg.getAttribute('data-src')) {
+                    commImg.src = commImg.getAttribute('data-src');
+                    commImg.removeAttribute('data-src');
+                }
+            }
+            
+            blockElement.querySelectorAll('input[type="radio"]').forEach(rad => rad.disabled = true);
+
+            let chosenVal = selectedInput ? selectedInput.value : null;
+            let isCorrect = (chosenVal === correctAnswer || correctAnswer === "ALL");
+
+            let cat = num <= 10 ? 'core' : (num <= 20 ? 'secondary' : 'advanced');
+            blockAnalysis[cat].t++;
+
+            if (isCorrect) {
+                rawScore++;
+                blockAnalysis[cat].c++;
+                blockElement.classList.add('card-correct');
+                badgeElement.innerHTML = correctAnswer === "ALL" ? `✅ CORRECT (All Options Valid) — Selected: (${chosenVal || 'None'})` : `✅ CORRECT — Selected: (${chosenVal})`;
+                badgeElement.style.color = "#10b981";
+                
+                if(currentSubject === 'mistakes') {
+                    mistakeBank = mistakeBank.filter(item => !(item.origIndex === q.index && item.year === q.year && item.subject === q.subject));
+                }
+            } else {
+                blockElement.classList.add('card-wrong');
+                badgeElement.innerHTML = `❌ INCORRECT — Correct Answer: (${correctAnswer}) | Selected: ${chosenVal ? '('+chosenVal+')' : 'None Selected'}`;
+                badgeElement.style.color = "#ef4444";
+                triggerHapticPulse(50);
+
+                if (currentSubject !== 'mistakes') {
+                    let duplicate = mistakeBank.some(item => item.origIndex === q.index && item.year === q.year && item.subject === q.subject);
+                    if (!duplicate) {
+                        mistakeBank.push({ origIndex: q.index, year: q.year, subject: currentSubject });
+                    }
+                }
+            }
+            badgeElement.style.display = 'block';
+
+            blockElement.querySelectorAll('.option-lbl').forEach(lbl => {
+                const val = lbl.querySelector('input').value;
+                if (val === correctAnswer || correctAnswer === "ALL") lbl.classList.add('lbl-correct');
+                if (chosenVal && val === chosenVal && chosenVal !== correctAnswer && correctAnswer !== "ALL") lbl.classList.add('lbl-wrong');
+            });
+        });
+
+        _mistakeBank = mistakeBank; // update in-memory bank
+        saveMistakeBank();          // sync to Supabase
+
+        let percentage = Math.round((rawScore / totalQuestions) * 100);
+        let predictedGrade = "F"; let gradeColor = "#ef4444";
+        if (percentage >= 75) { predictedGrade = "Distinction Pass (A)"; gradeColor = "#10b981"; }
+        else if (percentage >= 65) { predictedGrade = "Very Good Pass (B)"; gradeColor = "#3b82f6"; }
+        else if (percentage >= 55) { predictedGrade = "Credit Pass (C)"; gradeColor = "#6366f1"; }
+        else if (percentage >= 45) { predictedGrade = "Ordinary Pass (S)"; gradeColor = "#f59e0b"; }
+
+        if (currentSubject !== 'mistakes') {
+            _stats.attempted++;
+            _stats.totalScore += (rawScore * (50 / totalQuestions));
+            if (percentage > _stats.bestPercentage) {
+                _stats.bestPercentage = percentage;
+                _stats.bestGrade = percentage >= 75 ? 'A' : (percentage >= 65 ? 'B' : (percentage >= 55 ? 'C' : 'S'));
+            }
+            saveStats();           // sync to Supabase
+            clearSessionProgress(); // remove saved progress for this exam
+        }
+
+        const scoreBanner = document.getElementById('scoreDisplay');
+        scoreBanner.innerHTML = `
+            Performance Analytics Summary Matrix<br>
+            <div class="grade-pill-badge" style="background:${gradeColor}">${predictedGrade}</div><br>
+            <span style="font-size: 20px; color: var(--text-muted);">Final Result Metrics: <b>${rawScore} / ${totalQuestions} Correct</b> (${percentage}%)</span>
+            <div style="font-size: 14px; margin-top: 5px; color: var(--accent-color);">Pace Performance: Spent an average of ${Math.round(secondsElapsed / totalQuestions)} seconds per card.</div>
+            <div class="radar-box">
+                <b>Predictive Subsection Diagnostics Accuracy:</b><br><br>
+                <div class="radar-line"><span>Foundational Evaluation (Block 01-10):</span> <b>${blockAnalysis.core.c} / ${blockAnalysis.core.t}</b></div>
+                <div class="radar-line"><span>Intermediate Assessment (Block 11-20):</span> <b>${blockAnalysis.secondary.c} / ${blockAnalysis.secondary.t}</b></div>
+                <div class="radar-line"><span>Advanced Application Matrix (Block 21-50):</span> <b>${blockAnalysis.advanced.c} / ${blockAnalysis.advanced.t}</b></div>
+            </div>
+        `;
+        scoreBanner.style.display = 'block';
+
+        if(percentage >= 75) triggerHapticPulse([100, 50, 100, 50, 300]);
+        document.getElementById('submitBtn').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function playSynthBeep(freq, duration) {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.value = freq; osc.type = 'sine';
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
+
+    function triggerHapticPulse(pattern) {
+        if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function exitExamConfirm() {
+        if (confirm("Are you sure you want to exit this examination? Your choices will be lost.")) {
+            if (currentSubject === 'mistakes') {
+                navigateTo('home');
+            } else {
+                navigateTo(currentSubject); // goes to subject dashboard
+            }
+        }
+    }
+
+    // =============================================
+    // SUPABASE + AUTH + DATA SYNC SYSTEM
+    // =============================================
+
+    // 🔧 PASTE YOUR SUPABASE CREDENTIALS HERE:
+    const SUPABASE_URL  = 'https://srhcbgmbddpyqxioebrh.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaGNiZ21iZGRweXF4aW9lYnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MzA0MzgsImV4cCI6MjA5NzIwNjQzOH0.vx4N971y06akZ448md5ZpjnEohFvWvQq2HwC7VBCRL4';
+
+    // Load Supabase SDK then boot everything
+    (function loadSupabase() {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        s.onload = bootApp;
+        document.head.appendChild(s);
+    })();
+
+    // ── globals ──────────────────────────────────
+    let sb;           // supabase client
+    let currentUser;  // logged-in user object
+
+    // ── boot ─────────────────────────────────────
+    async function bootApp() {
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        // restore theme
+        if (localStorage.getItem('lightModeConfig') === 'true')
+            document.body.classList.add('light-mode');
+
+        // check existing session
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+            currentUser = session.user;
+            await enterSite();
+        } else {
+            showOverlay();
+        }
+
+        // listen for auth state changes (logout etc.)
+        sb.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_OUT') {
+                currentUser = null;
+                location.reload();
+            }
+        });
+
+        // boot particle canvas
+        startParticleCanvas();
+    }
+
+    // ── overlay helpers ───────────────────────────
+    function showOverlay() {
+        document.getElementById('login-overlay').style.display = 'flex';
+        document.getElementById('science-network').style.display = 'block';
+    }
+
+    function hideOverlay() {
+        const overlay = document.getElementById('login-overlay');
+        const canvas  = document.getElementById('science-network');
+        overlay.classList.add('hidden');
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            canvas.style.display  = 'none';
+        }, 650);
+    }
+
+    function showAuthError(msg) {
+        // find the error div in the currently active form view
+        const activeView = document.querySelector('.form-view.active');
+        const el = activeView ? activeView.querySelector('.login-error') : document.getElementById('login-error');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function hideAuthError() {
+        document.querySelectorAll('.login-error').forEach(el => el.style.display = 'none');
+    }
+
+    function setAuthLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.textContent = loading ? 'Please wait…' : btn.dataset.label;
+    }
+
+    function switchAuthView(targetId) {
+        document.querySelectorAll('.form-view').forEach(v => v.classList.remove('active'));
+        const t = document.getElementById(targetId);
+        if (t) t.classList.add('active');
+        hideAuthError();
+    }
+
+    // ── auth actions ──────────────────────────────
+    async function doLogin() {
+        hideAuthError();
+        const email = document.getElementById('login-email').value.trim();
+        const pwd   = document.getElementById('login-password').value;
+
+        if (!email || !pwd) { showAuthError('Please enter email and password.'); return; }
+
+        setAuthLoading('btn-login', true);
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
+        setAuthLoading('btn-login', false);
+
+        if (error) { showAuthError(error.message); return; }
+        currentUser = data.user;
+        await enterSite();
+    }
+
+    async function doSignup() {
+        hideAuthError();
+        const name  = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value.trim();
+        const pwd   = document.getElementById('signup-password').value;
+
+        if (!name || !email || !pwd) { showAuthError('All fields are required.'); return; }
+        if (pwd.length < 6)          { showAuthError('Password must be at least 6 characters.'); return; }
+
+        setAuthLoading('btn-signup', true);
+        const { data, error } = await sb.auth.signUp({
+            email, password: pwd,
+            options: { data: { full_name: name } }
+        });
+        setAuthLoading('btn-signup', false);
+
+        if (error) { showAuthError(error.message); return; }
+
+        // Supabase may require email confirmation
+        if (data.user && !data.session) {
+            showAuthError('✅ Check your email to confirm your account, then log in.');
+            switchAuthView('view-login');
+            return;
+        }
+        currentUser = data.user;
+
+        // Create profile row
+        await sb.from('profiles').upsert({
+            id: currentUser.id,
+            full_name: name,
+            email: email,
+            created_at: new Date().toISOString()
+        });
+
+        await enterSite();
+    }
+
+    async function doForgotPassword() {
+        hideAuthError();
+        const email = document.getElementById('forgot-email').value.trim();
+        if (!email) { showAuthError('Please enter your email.'); return; }
+
+        setAuthLoading('btn-forgot', true);
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.href
+        });
+        setAuthLoading('btn-forgot', false);
+
+        if (error) { showAuthError(error.message); return; }
+        showAuthError('✅ Password reset link sent! Check your email.');
+    }
+
+    async function doLogout() {
+        await sb.auth.signOut();
+    }
+
+    // ── enter site & load user data ───────────────
+    async function enterSite() {
+        hideOverlay();
+        await loadUserData();
+        renderGlobalMetricsDashboard();
+
+        // show logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.style.display = 'flex';
+            const nameEl = document.getElementById('user-name-display');
+            if (nameEl && currentUser) {
+                nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email;
+            }
+        }
+    }
+
+    // ── per-user data: load ───────────────────────
+    let _mistakeBank = [];
+    let _stats       = { attempted: 0, totalScore: 0, bestPercentage: 0, bestGrade: '-' };
+
+    async function loadUserData() {
+        if (!currentUser) return;
+        const uid = currentUser.id;
+
+        // Load stats
+        const { data: statsRow } = await sb
+            .from('user_stats')
+            .select('*')
+            .eq('user_id', uid)
+            .single();
+        if (statsRow) {
+            _stats = {
+                attempted:       statsRow.attempted       || 0,
+                totalScore:      statsRow.total_score     || 0,
+                bestPercentage:  statsRow.best_percentage || 0,
+                bestGrade:       statsRow.best_grade      || '-'
+            };
+        }
+
+        // Load mistake bank
+        const { data: mistakes } = await sb
+            .from('mistake_bank')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', { ascending: true });
+        if (mistakes) {
+            _mistakeBank = mistakes.map(r => ({
+                origIndex: r.question_index,
+                year:      r.year,
+                subject:   r.subject
+            }));
+        }
+    }
+
+    // ── per-user data: save stats ─────────────────
+    async function saveStats() {
+        if (!currentUser) return;
+        await sb.from('user_stats').upsert({
+            user_id:         currentUser.id,
+            attempted:       _stats.attempted,
+            total_score:     _stats.totalScore,
+            best_percentage: _stats.bestPercentage,
+            best_grade:      _stats.bestGrade,
+            updated_at:      new Date().toISOString()
+        }, { onConflict: 'user_id' });
+    }
+
+    // ── per-user data: save mistake bank ──────────
+    async function saveMistakeBank() {
+        if (!currentUser) return;
+        const uid = currentUser.id;
+
+        // Delete all existing mistakes for user then re-insert
+        await sb.from('mistake_bank').delete().eq('user_id', uid);
+        if (_mistakeBank.length > 0) {
+            const rows = _mistakeBank.map(m => ({
+                user_id:        uid,
+                question_index: m.origIndex,
+                year:           m.year,
+                subject:        m.subject,
+                created_at:     new Date().toISOString()
+            }));
+            await sb.from('mistake_bank').insert(rows);
+        }
+    }
+
+    // ── exam progress cache (per user, per exam) ──
+    async function saveCurrentSessionProgress() {
+        if (!currentUser || currentSubject === 'mistakes') return;
+        let state = {};
+        for (let i = 1; i <= activeQuestionsArray.length; i++) {
+            const rad = document.querySelector(`input[name="q${i}"]:checked`);
+            if (rad) state[i] = rad.value;
+        }
+        await sb.from('exam_progress').upsert({
+            user_id:  currentUser.id,
+            subject:  currentSubject,
+            year:     String(currentYear),
+            answers:  state,
+            saved_at: new Date().toISOString()
+        }, { onConflict: 'user_id,subject,year' });
+    }
+
+    async function restoreSavedSessionProgress() {
+        if (!currentUser || currentSubject === 'mistakes') return;
+        const { data } = await sb
+            .from('exam_progress')
+            .select('answers')
+            .eq('user_id', currentUser.id)
+            .eq('subject', currentSubject)
+            .eq('year', String(currentYear))
+            .single();
+        if (!data?.answers) return;
+        for (let num in data.answers) {
+            const input = document.querySelector(`input[name="q${num}"][value="${data.answers[num]}"]`);
+            if (input) {
+                input.checked = true;
+            }
+        }
+        updateRealtimeCounter();
+    }
+
+    async function clearSessionProgress() {
+        if (!currentUser) return;
+        await sb.from('exam_progress')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq('subject', currentSubject)
+            .eq('year', String(currentYear));
+    }
+
+    // ── dashboard (per-subject screens now hold stats) ──
+    function renderGlobalMetricsDashboard() {
+        // Stats are now shown on per-subject dashboards; this is kept for compatibility.
+    }
+
+    // ── mistake bank portal (reads _mistakeBank) ──
+    function launchMistakeBankPortal() {
+        if (_mistakeBank.length === 0) {
+            alert("Your Mistake Bank is empty! Answer questions incorrectly in mock papers to populate this revision matrix.");
+            return;
+        }
+        currentSubject = 'mistakes';
+        currentYear    = 'Revision';
+        isShuffleMode  = false;
+        activeQuestionsArray = _mistakeBank.slice(0, 50).map((item, index) => ({
+            index:        item.origIndex,
+            year:         item.year,
+            subject:      item.subject,
+            displayIndex: index + 1
+        }));
+        buildExamDomCanvas();
+    }
+
+    // ── particle canvas ───────────────────────────
+    function startParticleCanvas() {
+        const canvas = document.getElementById('science-network');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let width, height, particles, animId;
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            particles = [];
+            const count = Math.floor((width * height) / 9000);
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * width, y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5,
+                    radius: Math.random() * 2.5 + 1.5
+                });
+            }
+        }
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            const col = document.body.classList.contains('light-mode') ? '50,60,80' : '59,130,246';
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > width) p.vx *= -1;
+                if (p.y < 0 || p.y > height) p.vy *= -1;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${col},0.9)`; ctx.fill();
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dx = p.x - p2.x, dy = p.y - p2.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 150) {
+                        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(${col},${0.9 - dist / 150})`;
+                        ctx.lineWidth = 0.8; ctx.stroke();
+                    }
+                }
+            });
+            animId = requestAnimationFrame(draw);
+        }
+        window.addEventListener('resize', init);
+        init(); draw();
+
+        const observer = new MutationObserver(() => {
+            if (document.getElementById('login-overlay').style.display === 'none') {
+                cancelAnimationFrame(animId);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.getElementById('login-overlay'), { attributes: true, attributeFilter: ['style'] });
+    }
+</script>
+</body>
+</html>
